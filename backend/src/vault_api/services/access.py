@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from vault_api.deps import WorkspaceContext
 from vault_api.models import Membership, Project, ProjectMember, Role, User
 from vault_api.permissions import Perm
-from vault_api.services import notifications, vault_hooks
+from vault_api.services import notifications
 from vault_api.services.audit import RequestMeta
 
 SecureSnapshot = dict[uuid.UUID, set[uuid.UUID]]
@@ -139,16 +139,18 @@ async def on_secure_access_lost(
     meta: RequestMeta | None,
 ) -> None:
     """Revocation (requirement 7.5). The vault layer deletes sealed keys and schedules rotation."""
-    await vault_hooks.revoke_secure_access(
-        db, workspace_id, project_id, user_ids, actor=actor, meta=meta
-    )
+    from vault_api.services import vault
+
+    await vault.revoke_secure_access(db, workspace_id, project_id, user_ids, actor=actor, meta=meta)
 
 
 async def on_secure_access_gained(
     db: AsyncSession, workspace_id: uuid.UUID, project_id: uuid.UUID, user_ids: set[uuid.UUID]
 ) -> None:
     """Grant (requirement 7.4). The vault layer queues pending grants for key holders."""
-    await vault_hooks.queue_secure_grants(db, workspace_id, project_id, user_ids)
+    from vault_api.services import vault
+
+    await vault.queue_secure_grants(db, workspace_id, project_id, user_ids)
 
 
 def notify_project_access(

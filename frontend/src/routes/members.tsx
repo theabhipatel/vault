@@ -25,6 +25,7 @@ import { useWorkspaceScope } from "@/components/layout/workspace-context"
 import { Page, PageHeader } from "@/components/page"
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states"
 import { UserAvatar } from "@/components/user-avatar"
+import { Fingerprint } from "@/components/vault/fingerprint"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -65,7 +66,7 @@ import { Perm } from "@/lib/permissions"
 import type { Member, Project, Role } from "@/lib/types"
 
 const VAULT_STATUS: Record<Member["vault_status"], { label: string; variant: "success" | "warning" | "secondary" }> = {
-  ready: { label: "Set up", variant: "success" },
+  ready: { label: "Ready", variant: "success" },
   pending: { label: "Access pending", variant: "warning" },
   not_set_up: { label: "Not set up", variant: "secondary" },
 }
@@ -259,11 +260,7 @@ function MembersTable({ members }: { members: Member[] }) {
                     <Badge variant={status.variant}>{status.label}</Badge>
                   </TableCell>
                   <TableCell className="hidden xl:table-cell">
-                    {m.key_fingerprint ? (
-                      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{m.key_fingerprint}</code>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">No key yet</span>
-                    )}
+                    <Fingerprint publicKey={m.public_key} />
                   </TableCell>
                   <TableCell className="pr-4">
                     {m.can_manage || (can(Perm.manageProjectMembers) && !m.all_projects) ? (

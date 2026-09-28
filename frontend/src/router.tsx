@@ -17,6 +17,7 @@ import { ProjectsPage } from "@/routes/projects"
 import { RolesPage } from "@/routes/roles"
 import { SettingsLayout } from "@/routes/settings/layout"
 import { AccountSection, AppearanceSection, ProfileSection, SecuritySection } from "@/routes/settings/sections"
+import { VaultSection } from "@/routes/settings/vault"
 import { WorkspaceSettingsPage } from "@/routes/workspace-settings"
 
 export const router = createBrowserRouter([
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
               { path: "profile", element: <ProfileSection /> },
               { path: "appearance", element: <AppearanceSection /> },
               { path: "security", element: <SecuritySection /> },
+              { path: "vault", element: <VaultSection /> },
               { path: "account", element: <AccountSection /> },
             ],
           },

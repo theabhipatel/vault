@@ -83,6 +83,10 @@ class DocumentSummary(APIModel):
 
 class DocumentOut(DocumentSummary):
     content: str | None
+    # Secure documents only (AES-256-GCM, decrypted in the browser).
+    ciphertext: str | None = None
+    nonce: str | None = None
+    key_version: int | None = None
     can_edit: bool
     can_delete: bool
 
@@ -97,6 +101,9 @@ class VersionSummary(APIModel):
 
 class VersionOut(VersionSummary):
     content: str | None
+    ciphertext: str | None = None
+    nonce: str | None = None
+    key_version: int | None = None
 
 
 class RestoreIn(APIModel):

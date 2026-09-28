@@ -8,7 +8,16 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import aliased
 
 from vault_api.deps import DB, CurrentAuth, Meta, WsCtx, load_workspace_context
-from vault_api.models import Membership, Project, ProjectMember, Role, User, Workspace
+from vault_api.models import (
+    Membership,
+    Notification,
+    Project,
+    ProjectMember,
+    Role,
+    User,
+    UserVault,
+    Workspace,
+)
 from vault_api.permissions import (
     Perm,
     PermissionDenied,
@@ -29,7 +38,7 @@ from vault_api.schemas.workspace import (
     WorkspaceSummary,
     WorkspaceUpdate,
 )
-from vault_api.services import audit, notifications
+from vault_api.services import audit, notifications, vault
 from vault_api.services.access import (
     accessible_project_ids,
     apply_secure_access_changes,
@@ -81,6 +90,25 @@ async def list_workspaces(auth: CurrentAuth, db: DB) -> list[WorkspaceSummary]:
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create(body: WorkspaceCreate, auth: CurrentAuth, db: DB, meta: Meta) -> WorkspaceSummary:
     ws = await create_workspace(db, auth.user, body.name)
+    if await db.get(UserVault, auth.user.id) is None:
+        reminded = await db.scalar(
+            select(func.count())
+            .select_from(Notification)
+            .where(
+                Notification.user_id == auth.user.id,
+                Notification.type == "vault.setup_reminder",
+                Notification.read_at.is_(None),
+            )
+        )
+        if not reminded:
+            notifications.notify(
+                db,
+                user_id=auth.user.id,
+                type="vault.setup_reminder",
+                title="Set up your vault",
+                body="Choose a vault password to create and read end-to-end encrypted documents.",
+                link="/settings/vault",
+            )
     audit.record(
         db,
         action="workspace.created",
@@ -281,6 +309,7 @@ async def list_members(ctx: WsCtx, db: DB) -> list[MemberOut]:
         if pid in visible:
             projects_by_user[pm_user].append(ProjectRef(id=pid, name=pname))
     can_act = ctx.actor.has(Perm.MEMBERS_CHANGE_ROLE) or ctx.actor.has(Perm.MEMBERS_REMOVE)
+    vault_states = await vault.member_vault_status(db, ctx.workspace.id)
     return [
         MemberOut(
             user_id=user.id,
@@ -294,8 +323,8 @@ async def list_members(ctx: WsCtx, db: DB) -> list[MemberOut]:
             joined_at=m.joined_at,
             all_projects=m.is_owner or Perm.PROJECTS_ACCESS_ALL.value in role.permissions,
             projects=projects_by_user[user.id],
-            vault_status="not_set_up",
-            key_fingerprint=None,
+            vault_status=vault_states.get(user.id, ("not_set_up", None))[0],
+            public_key=vault_states.get(user.id, ("not_set_up", None))[1],
             can_manage=(
                 can_act
                 and user.id != ctx.user.id

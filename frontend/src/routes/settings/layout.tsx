@@ -1,4 +1,4 @@
-import { Palette, ShieldCheck, TriangleAlert, UserRound } from "lucide-react"
+import { KeyRound, Palette, ShieldCheck, TriangleAlert, UserRound } from "lucide-react"
 import { NavLink, Outlet } from "react-router"
 
 import { useBreadcrumbs } from "@/components/layout/breadcrumbs"
@@ -9,6 +9,7 @@ const SECTIONS = [
   { to: "/settings/profile", label: "Profile", icon: UserRound },
   { to: "/settings/appearance", label: "Appearance", icon: Palette },
   { to: "/settings/security", label: "Security", icon: ShieldCheck },
+  { to: "/settings/vault", label: "Vault", icon: KeyRound },
   { to: "/settings/account", label: "Account", icon: TriangleAlert },
 ]
 

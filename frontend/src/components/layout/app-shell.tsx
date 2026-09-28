@@ -3,6 +3,7 @@ import { Search } from "lucide-react"
 import { Navigate, Outlet, useLocation, useMatch } from "react-router"
 
 import { InvitationsDialog } from "@/components/invitations"
+import { VaultSetupBanner, VaultStatusButton } from "@/components/vault/vault-status"
 import { FullPageSpinner } from "@/components/states"
 import { Button } from "@/components/ui/button"
 import { Kbd } from "@/components/ui/kbd"
@@ -11,6 +12,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { useMe, useMyInvitations, useWorkspaces } from "@/hooks/api"
 import { getLastWorkspace } from "@/lib/last-workspace"
 import { useTheme } from "@/lib/theme"
+import { VaultProvider } from "@/vault/vault-context"
 
 import { AppSidebar } from "./app-sidebar"
 import { BreadcrumbProvider, TopbarBreadcrumbs } from "./breadcrumbs"
@@ -50,6 +52,7 @@ function Topbar() {
         <TopbarBreadcrumbs />
       </div>
       <SearchButton />
+      <VaultStatusButton />
       <NotificationsMenu />
       <UserMenu />
     </header>
@@ -111,6 +114,7 @@ export function AppShell() {
           <AppSidebar workspaceId={workspaceId} />
           <SidebarInset className="min-w-0">
             <Topbar />
+            <VaultSetupBanner />
             <div className="flex-1">
               <Outlet />
             </div>
@@ -132,7 +136,11 @@ export function RequireAuth() {
     return <Navigate to={next === "/" ? "/login" : `/login?next=${encodeURIComponent(next)}`} replace />
   }
   if (me.needs_onboarding && location.pathname !== "/onboarding") return <Navigate to="/onboarding" replace />
-  return <Outlet />
+  return (
+    <VaultProvider>
+      <Outlet />
+    </VaultProvider>
+  )
 }
 
 /** Auth screens: bounce signed-in users into the app. */

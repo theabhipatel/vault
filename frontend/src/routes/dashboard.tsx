@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ArrowRight, FileText, FolderKanban, FolderPlus, Mail, PartyPopper, UserPlus, Users, X } from "lucide-react"
+import { ArrowRight, FileText, FolderKanban, FolderPlus, Hourglass, Mail, PartyPopper, ShieldPlus, UserPlus, Users, X } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Link, useSearchParams } from "react-router"
 
@@ -16,6 +16,9 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useActivity, useMe, useMyInvitations, useProjects, useRecentDocuments, useWorkspaces } from "@/hooks/api"
+import { useQuery } from "@tanstack/react-query"
+import { client, unwrap } from "@/lib/api"
+import { useVault } from "@/vault/vault-context"
 import { Perm } from "@/lib/permissions"
 
 function greeting(): string {
@@ -54,6 +57,12 @@ export function DashboardPage() {
   const { data: invitations } = useMyInvitations(true)
   const [creating, setCreating] = useState(false)
   const [showInvites, setShowInvites] = useState(false)
+  const vault = useVault()
+  const vaultSummary = useQuery({
+    queryKey: ["vault-summary"],
+    queryFn: () => unwrap(client.GET("/api/vault/summary")),
+    enabled: vault.status !== "loading" && vault.status !== "none",
+  })
   useBreadcrumbs([{ label: workspace.name }])
 
   const summary = workspaces?.find((w) => w.id === id)
@@ -108,6 +117,31 @@ export function DashboardPage() {
                 <X />
               </Button>
             </AlertAction>
+          </Alert>
+        ) : null}
+        {vault.status === "none" ? (
+          <Alert variant="secure">
+            <ShieldPlus />
+            <AlertTitle>Set up your vault</AlertTitle>
+            <AlertDescription>
+              Everything works without it, except secure documents: those stay locked until you choose a vault password.
+            </AlertDescription>
+            <AlertAction>
+              <Button size="sm" variant="secure" onClick={vault.openSetup}>
+                Set up vault
+              </Button>
+            </AlertAction>
+          </Alert>
+        ) : null}
+        {vaultSummary.data && vaultSummary.data.pending_projects > 0 ? (
+          <Alert variant="secure">
+            <Hourglass />
+            <AlertTitle>
+              Secure access pending in {vaultSummary.data.pending_projects} project{vaultSummary.data.pending_projects === 1 ? "" : "s"}
+            </AlertTitle>
+            <AlertDescription>
+              A teammate who holds the key will share it with you automatically the next time their vault is unlocked.
+            </AlertDescription>
           </Alert>
         ) : null}
         {invitations && invitations.length > 0 ? (

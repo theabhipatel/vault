@@ -974,6 +974,303 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Vault */
+        get: operations["get_vault_api_vault_get"];
+        put?: never;
+        /** Setup Vault */
+        post: operations["setup_vault_api_vault_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vault Summary */
+        get: operations["vault_summary_api_vault_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change Vault Password */
+        put: operations["change_vault_password_api_vault_password_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Regenerate Recovery */
+        put: operations["regenerate_recovery_api_vault_recovery_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover Vault
+         * @description Forgot the vault password but has the recovery key: new password + new recovery key.
+         */
+        post: operations["recover_vault_api_vault_recover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/reset-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reset Impact */
+        get: operations["reset_impact_api_vault_reset_impact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Vault
+         * @description Forgot everything: new keypair. Old sealed keys are discarded (treated as revocation).
+         */
+        post: operations["reset_vault_api_vault_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vault/pending-work": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pending Work
+         * @description Grants and rotations this user's browser can complete right now.
+         */
+        get: operations["pending_work_api_vault_pending_work_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Project Vault */
+        get: operations["project_vault_api_workspaces__workspace_id__projects__project_id__vault_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault/init": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Init Project Key
+         * @description The first secure document: the creator's browser made a key and sealed it for everyone.
+         */
+        post: operations["init_project_key_api_workspaces__workspace_id__projects__project_id__vault_init_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant Project Key
+         * @description A key holder's browser shares the current project key with pending members.
+         */
+        post: operations["grant_project_key_api_workspaces__workspace_id__projects__project_id__vault_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault/rotation-material": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rotation Material */
+        get: operations["rotation_material_api_workspaces__workspace_id__projects__project_id__vault_rotation_material_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate Project Key
+         * @description Atomically swap every secure ciphertext of the project to a new key version.
+         *
+         *     Either everything (all documents, all versions, new grants) is replaced in one transaction,
+         *     or nothing is, so an interrupted rotation can never leave a project unreadable.
+         */
+        post: operations["rotate_project_key_api_workspaces__workspace_id__projects__project_id__vault_rotate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/vault/abandon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abandon Project Key
+         * @description When nobody holds the key any more, delete the unreadable secure documents and start over.
+         */
+        post: operations["abandon_project_key_api_workspaces__workspace_id__projects__project_id__vault_abandon_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/projects/{project_id}/secure-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Secure Document */
+        post: operations["create_secure_document_api_workspaces__workspace_id__projects__project_id__secure_documents_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/documents/{document_id}/secure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Secure Document */
+        put: operations["save_secure_document_api_workspaces__workspace_id__documents__document_id__secure_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1128,6 +1425,12 @@ export interface components {
             updated_by: components["schemas"]["UserRef"] | null;
             /** Content */
             content: string | null;
+            /** Ciphertext */
+            ciphertext?: string | null;
+            /** Nonce */
+            nonce?: string | null;
+            /** Key Version */
+            key_version?: number | null;
             /** Can Edit */
             can_edit: boolean;
             /** Can Delete */
@@ -1191,10 +1494,34 @@ export interface components {
              */
             email: string;
         };
+        /** GrantIn */
+        GrantIn: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Public Key */
+            public_key: string;
+            /** Sealed Key */
+            sealed_key: string;
+        };
+        /** GrantKeysIn */
+        GrantKeysIn: {
+            /** Key Version */
+            key_version: number;
+            /** Grants */
+            grants: components["schemas"]["GrantIn"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** InitKeyIn */
+        InitKeyIn: {
+            /** Grants */
+            grants: components["schemas"]["GrantIn"][];
         };
         /** InvitationCreate */
         InvitationCreate: {
@@ -1250,6 +1577,20 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** KdfParams */
+        KdfParams: {
+            /**
+             * Algorithm
+             * @constant
+             */
+            algorithm: "argon2id13";
+            /** Salt */
+            salt: string;
+            /** Ops */
+            ops: number;
+            /** Mem */
+            mem: number;
         };
         /** Me */
         Me: {
@@ -1323,8 +1664,8 @@ export interface components {
              * @enum {string}
              */
             vault_status: "not_set_up" | "ready" | "pending";
-            /** Key Fingerprint */
-            key_fingerprint: string | null;
+            /** Public Key */
+            public_key: string | null;
             /** Can Manage */
             can_manage: boolean;
         };
@@ -1410,6 +1751,29 @@ export interface components {
             created_at: string;
             /** Read At */
             read_at: string | null;
+        };
+        /** PendingWork */
+        PendingWork: {
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
+            /** Workspace Name */
+            workspace_name: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Key Version */
+            key_version: number;
+            /** Rotation Pending */
+            rotation_pending: boolean;
+            /** Recipients */
+            recipients: components["schemas"]["Recipient"][];
         };
         /** PermissionInfo */
         PermissionInfo: {
@@ -1510,12 +1874,77 @@ export interface components {
             /** Description */
             description?: string | null;
         };
+        /** ProjectVaultState */
+        ProjectVaultState: {
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
+            /** Key Version */
+            key_version: number | null;
+            /** Rotation Pending */
+            rotation_pending: boolean;
+            /** Holders */
+            holders: number;
+            /**
+             * My State
+             * @enum {string}
+             */
+            my_state: "no_permission" | "no_vault" | "uninitialized" | "pending" | "ready" | "lost";
+            /** My Sealed Key */
+            my_sealed_key: string | null;
+            /** Recipients */
+            recipients: components["schemas"]["Recipient"][];
+            /** Missing */
+            missing: string[];
+        };
         /** PublicConfig */
         PublicConfig: {
             /** App Name */
             app_name: string;
             /** Google Enabled */
             google_enabled: boolean;
+        };
+        /** Recipient */
+        Recipient: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Public Key */
+            public_key: string;
+        };
+        /** ResetImpact */
+        ResetImpact: {
+            /**
+             * Workspace Id
+             * Format: uuid
+             */
+            workspace_id: string;
+            /** Workspace Name */
+            workspace_name: string;
+            /**
+             * Project Id
+             * Format: uuid
+             */
+            project_id: string;
+            /** Project Name */
+            project_name: string;
+            /** Secure Document Count */
+            secure_document_count: number;
+            /** Sole Holder */
+            sole_holder: boolean;
         };
         /** ResetPasswordIn */
         ResetPasswordIn: {
@@ -1588,12 +2017,96 @@ export interface components {
             /** Place Below Role Id */
             place_below_role_id?: string | null;
         };
+        /** RotateIn */
+        RotateIn: {
+            /** From Version */
+            from_version: number;
+            /** Grants */
+            grants: components["schemas"]["GrantIn"][];
+            /** Items */
+            items: components["schemas"]["RotatedItem"][];
+        };
+        /** RotatedItem */
+        RotatedItem: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Version */
+            version: number;
+            /** Ciphertext */
+            ciphertext: string;
+            /** Nonce */
+            nonce: string;
+        };
+        /** RotationItem */
+        RotationItem: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /** Version */
+            version: number;
+            /** Format */
+            format: string;
+            /** Ciphertext */
+            ciphertext: string;
+            /** Nonce */
+            nonce: string;
+            /** Key Version */
+            key_version: number;
+        };
+        /** RotationMaterial */
+        RotationMaterial: {
+            /** Key Version */
+            key_version: number;
+            /** Items */
+            items: components["schemas"]["RotationItem"][];
+        };
         /** SearchResults */
         SearchResults: {
             /** Projects */
             projects: components["schemas"]["ProjectOut"][];
             /** Documents */
             documents: components["schemas"]["DocumentSummary"][];
+        };
+        /** SecureDocumentCreate */
+        SecureDocumentCreate: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "text" | "markdown" | "env";
+            /** Key Version */
+            key_version: number;
+            /** Ciphertext */
+            ciphertext: string;
+            /** Nonce */
+            nonce: string;
+        };
+        /** SecureDocumentUpdate */
+        SecureDocumentUpdate: {
+            /** Expected Version */
+            expected_version: number;
+            /** Name */
+            name?: string | null;
+            /** Key Version */
+            key_version: number;
+            /** Ciphertext */
+            ciphertext: string;
+            /** Nonce */
+            nonce: string;
+            /** Restored From */
+            restored_from?: number | null;
         };
         /** SessionOut */
         SessionOut: {
@@ -1683,6 +2196,115 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
+        /** VaultKeysIn */
+        VaultKeysIn: {
+            /** Public Key */
+            public_key: string;
+            kdf: components["schemas"]["KdfParams"];
+            /** Encrypted Private Key */
+            encrypted_private_key: string;
+            /** Private Key Nonce */
+            private_key_nonce: string;
+            /** Recovery Encrypted Private Key */
+            recovery_encrypted_private_key: string;
+            /** Recovery Nonce */
+            recovery_nonce: string;
+        };
+        /** VaultOut */
+        VaultOut: {
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+            /** Public Key */
+            public_key: string;
+            kdf: components["schemas"]["KdfParams"];
+            /** Encrypted Private Key */
+            encrypted_private_key: string;
+            /** Private Key Nonce */
+            private_key_nonce: string;
+            /** Recovery Encrypted Private Key */
+            recovery_encrypted_private_key: string;
+            /** Recovery Nonce */
+            recovery_nonce: string;
+            /** Key Epoch */
+            key_epoch: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * VaultPasswordIn
+         * @description Re-encrypt the same private key under a new password-derived key.
+         */
+        VaultPasswordIn: {
+            /** Public Key */
+            public_key: string;
+            kdf: components["schemas"]["KdfParams"];
+            /** Encrypted Private Key */
+            encrypted_private_key: string;
+            /** Private Key Nonce */
+            private_key_nonce: string;
+        };
+        /** VaultRecoverIn */
+        VaultRecoverIn: {
+            /** Public Key */
+            public_key: string;
+            kdf: components["schemas"]["KdfParams"];
+            /** Encrypted Private Key */
+            encrypted_private_key: string;
+            /** Private Key Nonce */
+            private_key_nonce: string;
+            /** Recovery Encrypted Private Key */
+            recovery_encrypted_private_key: string;
+            /** Recovery Nonce */
+            recovery_nonce: string;
+        };
+        /** VaultRecoveryIn */
+        VaultRecoveryIn: {
+            /** Public Key */
+            public_key: string;
+            /** Recovery Encrypted Private Key */
+            recovery_encrypted_private_key: string;
+            /** Recovery Nonce */
+            recovery_nonce: string;
+        };
+        /** VaultResetIn */
+        VaultResetIn: {
+            /** Public Key */
+            public_key: string;
+            kdf: components["schemas"]["KdfParams"];
+            /** Encrypted Private Key */
+            encrypted_private_key: string;
+            /** Private Key Nonce */
+            private_key_nonce: string;
+            /** Recovery Encrypted Private Key */
+            recovery_encrypted_private_key: string;
+            /** Recovery Nonce */
+            recovery_nonce: string;
+            /**
+             * Confirm
+             * @constant
+             */
+            confirm: "RESET";
+        };
+        /** VaultSummary */
+        VaultSummary: {
+            /** Has Vault */
+            has_vault: boolean;
+            /** Public Key */
+            public_key: string | null;
+            /** Pending Projects */
+            pending_projects: number;
+        };
         /** VersionOut */
         VersionOut: {
             /** Version */
@@ -1699,6 +2321,12 @@ export interface components {
             restored_from: number | null;
             /** Content */
             content: string | null;
+            /** Ciphertext */
+            ciphertext?: string | null;
+            /** Nonce */
+            nonce?: string | null;
+            /** Key Version */
+            key_version?: number | null;
         };
         /** VersionSummary */
         VersionSummary: {
@@ -3883,6 +4511,527 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Message"];
+                };
+            };
+        };
+    };
+    get_vault_api_vault_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"] | null;
+                };
+            };
+        };
+    };
+    setup_vault_api_vault_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultKeysIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vault_summary_api_vault_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultSummary"];
+                };
+            };
+        };
+    };
+    change_vault_password_api_vault_password_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultPasswordIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    regenerate_recovery_api_vault_recovery_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultRecoveryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recover_vault_api_vault_recover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultRecoverIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_impact_api_vault_reset_impact_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResetImpact"][];
+                };
+            };
+        };
+    };
+    reset_vault_api_vault_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultResetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VaultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pending_work_api_vault_pending_work_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingWork"][];
+                };
+            };
+        };
+    };
+    project_vault_api_workspaces__workspace_id__projects__project_id__vault_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectVaultState"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    init_project_key_api_workspaces__workspace_id__projects__project_id__vault_init_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InitKeyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_project_key_api_workspaces__workspace_id__projects__project_id__vault_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantKeysIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rotation_material_api_workspaces__workspace_id__projects__project_id__vault_rotation_material_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RotationMaterial"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rotate_project_key_api_workspaces__workspace_id__projects__project_id__vault_rotate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RotateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    abandon_project_key_api_workspaces__workspace_id__projects__project_id__vault_abandon_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_secure_document_api_workspaces__workspace_id__projects__project_id__secure_documents_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecureDocumentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_secure_document_api_workspaces__workspace_id__documents__document_id__secure_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecureDocumentUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

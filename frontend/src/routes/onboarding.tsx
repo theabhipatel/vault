@@ -1,12 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowRight, Building2, LogOut } from "lucide-react"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 import { z } from "zod"
 
 import { Logo } from "@/components/brand"
+import { SetupVaultFlow } from "@/components/vault/vault-dialogs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
@@ -17,6 +19,7 @@ import { useSignOut } from "@/hooks/session"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import { setLastWorkspace } from "@/lib/last-workspace"
 import { cn } from "@/lib/utils"
+import { useVault } from "@/vault/vault-context"
 
 const schema = z.object({ name: z.string().trim().min(1, "Give your workspace a name.").max(80) })
 
@@ -33,6 +36,10 @@ export function OnboardingPage() {
     defaultValues: { name: firstName ? `${firstName}'s workspace` : "" },
   })
 
+  const vault = useVault()
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const finish = (id: string) => navigate(`/w/${id}?welcome=1`, { replace: true })
+
   const create = useMutation({
     mutationFn: (name: string) => unwrap(client.POST("/api/workspaces", { body: { name } })),
     onSuccess: async (ws) => {
@@ -41,10 +48,14 @@ export function OnboardingPage() {
         queryClient.invalidateQueries({ queryKey: qk.me }),
         queryClient.invalidateQueries({ queryKey: qk.workspaces }),
       ])
-      navigate(`/w/${ws.id}?welcome=1`, { replace: true })
+      // Step 2: a gentle, skippable prompt to create the vault password.
+      if (vault.status === "none") setCreatedId(ws.id)
+      else finish(ws.id)
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
+
+  const current = createdId ? 1 : 0
 
   return (
     <div className="bg-vault-glow relative flex min-h-dvh flex-col">
@@ -60,13 +71,20 @@ export function OnboardingPage() {
           <ol className="mb-8 flex items-center gap-2" aria-label="Setup progress">
             {STEPS.map((step, i) => (
               <li key={step} className="flex flex-1 flex-col gap-2">
-                <span className={cn("h-1 rounded-full", i === 0 ? "bg-brand" : "bg-border")} />
-                <span className={cn("text-xs", i === 0 ? "text-foreground font-medium" : "text-muted-foreground")}>
+                <span className={cn("h-1 rounded-full", i <= current ? "bg-brand" : "bg-border")} />
+                <span className={cn("text-xs", i === current ? "text-foreground font-medium" : "text-muted-foreground")}>
                   {step}
                 </span>
               </li>
             ))}
           </ol>
+          {createdId ? (
+            <Card className="shadow-lg">
+              <CardContent className="py-2">
+                <SetupVaultFlow onDone={() => finish(createdId)} onCancel={() => finish(createdId)} cancelLabel="Skip for now" />
+              </CardContent>
+            </Card>
+          ) : (
           <Card className="shadow-lg">
             <CardContent className="space-y-6 py-2">
               <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-soft text-brand ring-1 ring-brand/20">
@@ -94,6 +112,7 @@ export function OnboardingPage() {
               </form>
             </CardContent>
           </Card>
+          )}
         </div>
       </main>
     </div>

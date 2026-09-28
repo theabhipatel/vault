@@ -70,6 +70,9 @@ async def _document_out(
     return DocumentOut(
         **summary.model_dump(),
         content=doc.content if doc.kind == "normal" else None,
+        ciphertext=doc.ciphertext if doc.kind == "secure" else None,
+        nonce=doc.nonce if doc.kind == "secure" else None,
+        key_version=doc.key_version if doc.kind == "secure" else None,
         can_edit=writable and ctx.actor.has(EDIT_PERM[doc.kind]),
         can_delete=writable and ctx.actor.has(DELETE_PERM[doc.kind]),
     )
@@ -198,9 +201,10 @@ async def recent_documents(
 @router.get("/documents/{document_id}")
 async def get_document(document_id: uuid.UUID, ctx: WsCtx, db: DB, meta: Meta) -> DocumentOut:
     doc, project = await _load(ctx, db, document_id)
+    # Secure views are logged when the ciphertext is fetched (the server can't see decryption).
     audit.record(
         db,
-        action="document.viewed",
+        action="secure_document.viewed" if doc.kind == "secure" else "document.viewed",
         actor=ctx.user,
         meta=meta,
         workspace_id=ctx.workspace.id,
@@ -227,6 +231,27 @@ async def update_document(
             status.HTTP_409_CONFLICT,
             "Someone else saved this document in the meantime. Reload to see their changes.",
         )
+    if doc.kind == "secure":
+        # Names are not encrypted. Renaming doesn't create a new encrypted version, because
+        # each ciphertext is bound to its version number.
+        if body.name is not None and body.name != doc.name:
+            audit.record(
+                db,
+                action="secure_document.renamed",
+                actor=ctx.user,
+                meta=meta,
+                workspace_id=ctx.workspace.id,
+                project_id=project.id,
+                target_type="document",
+                target_id=doc.id,
+                target_label=body.name,
+                details={"from": doc.name},
+            )
+            doc.name = body.name
+            doc.updated_at = utcnow()
+            doc.updated_by_id = ctx.user.id
+            await db.commit()
+        return await _document_out(ctx, db, doc, project)
     changed: list[str] = []
     if body.name is not None and body.name != doc.name:
         doc.name = body.name
@@ -339,6 +364,9 @@ async def get_version(document_id: uuid.UUID, version: int, ctx: WsCtx, db: DB) 
         created_by=refs.get(v.created_by_id) if v.created_by_id else None,
         restored_from=v.restored_from,
         content=v.content if doc.kind == "normal" else None,
+        ciphertext=v.ciphertext if doc.kind == "secure" else None,
+        nonce=v.nonce if doc.kind == "secure" else None,
+        key_version=v.key_version if doc.kind == "secure" else None,
     )
 
 

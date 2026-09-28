@@ -254,3 +254,42 @@ async def run_worker(stop: asyncio.Event, interval: float = 2.0) -> None:
             log.exception("Email worker iteration failed")
         with suppress(TimeoutError):
             await asyncio.wait_for(stop.wait(), timeout=interval)
+
+
+def send_vault_event(db: AsyncSession, to: str, event: str) -> None:
+    """Security email for vault changes. Never includes key material."""
+    subjects = {
+        "password_changed": (
+            "Your vault password was changed",
+            "Vault password changed",
+            "The password that unlocks your vault was just changed. Your keys "
+            "and access are unchanged.",
+        ),
+        "recovered": (
+            "Your vault was recovered",
+            "Vault recovered with your recovery key",
+            "Your recovery key was used to set a new vault password, and a new "
+            "recovery key was issued. The old recovery key no longer works.",
+        ),
+        "reset": (
+            "Your vault was reset",
+            "Your vault was reset",
+            "A new vault keypair was created for your account. Your previous keys were "
+            "discarded. Teammates' browsers will re-share project keys with you "
+            "automatically; projects where you were the only key holder can no longer "
+            "be decrypted.",
+        ),
+    }
+    subject, title, body = subjects[event]
+    enqueue(
+        db,
+        to,
+        subject,
+        title,
+        [
+            body,
+            "If this wasn't you, change your login password and sign out other sessions "
+            "immediately.",
+        ],
+        ("Review security settings", link("/settings/security")),
+    )

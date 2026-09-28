@@ -6,7 +6,7 @@ import { actionLabel, relativeTime } from "@/lib/format"
 import type { Activity } from "@/lib/types"
 
 function targetLink(item: Activity, workspaceId: string): string | null {
-  if (item.target_type === "document" && item.project_id && item.target_id && item.action !== "document.deleted") {
+  if (item.target_type === "document" && item.project_id && item.target_id && !item.action.endsWith(".deleted")) {
     return `/w/${workspaceId}/projects/${item.project_id}/docs/${item.target_id}`
   }
   if (item.target_type === "project" && item.project_id && item.action !== "project.deleted") {

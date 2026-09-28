@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -22,6 +22,12 @@ class Project(TimestampMixin, Base):
     )
     archived_at: Mapped[datetime | None]
     last_activity_at: Mapped[datetime] = mapped_column(default=utcnow)
+    # Current project key version (NULL until the first secure document creates a key).
+    key_version: Mapped[int | None] = mapped_column(Integer)
+    # Set when someone lost secure access; the next key holder's browser rotates the key.
+    rotation_pending: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=text("false")
+    )
 
 
 class ProjectMember(Base):
@@ -54,6 +60,10 @@ class Document(Base):
     format: Mapped[str] = mapped_column(String(10))
     # Plaintext for normal documents only. Secure documents never store plaintext.
     content: Mapped[str | None] = mapped_column(Text)
+    # Secure documents only: AES-256-GCM ciphertext of the current version.
+    ciphertext: Mapped[str | None] = mapped_column(Text)
+    nonce: Mapped[str | None] = mapped_column(String(32))
+    key_version: Mapped[int | None] = mapped_column(Integer)
     version: Mapped[int] = mapped_column(Integer, default=1)
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
@@ -78,6 +88,9 @@ class DocumentVersion(Base):
     version: Mapped[int] = mapped_column(Integer)
     name: Mapped[str] = mapped_column(String(200))
     content: Mapped[str | None] = mapped_column(Text)
+    ciphertext: Mapped[str | None] = mapped_column(Text)
+    nonce: Mapped[str | None] = mapped_column(String(32))
+    key_version: Mapped[int | None] = mapped_column(Integer)
     restored_from: Mapped[int | None] = mapped_column(Integer)
     created_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")

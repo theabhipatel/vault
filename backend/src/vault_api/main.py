@@ -25,6 +25,7 @@ from vault_api.routers import (
     invitations,
     projects,
     roles,
+    vault,
     workspaces,
 )
 from vault_api.security import ratelimit
@@ -36,6 +37,8 @@ settings = get_settings()
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_HEADER = "x-csrf-token"
 MAX_BODY_BYTES = 8 * 1024 * 1024
+# Key rotation re-uploads every secure ciphertext (and version) of a project in one request.
+MAX_ROTATION_BODY_BYTES = 256 * 1024 * 1024
 
 
 async def housekeeping(stop: asyncio.Event, interval: float = 600) -> None:
@@ -105,7 +108,12 @@ async def security_middleware(
     is_api = request.url.path.startswith("/api/")
     if is_api and request.method not in SAFE_METHODS:
         length = request.headers.get("content-length")
-        if length and length.isdigit() and int(length) > MAX_BODY_BYTES:
+        limit = (
+            MAX_ROTATION_BODY_BYTES
+            if request.url.path.endswith("/vault/rotate")
+            else MAX_BODY_BYTES
+        )
+        if length and length.isdigit() and int(length) > limit:
             return JSONResponse({"detail": "Request too large."}, status_code=413)
         # 1) The request must come from our own origin.
         origin = request.headers.get("origin")
@@ -171,6 +179,6 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-for module in (auth, account, workspaces, roles, invitations, projects, documents, activity):
+for module in (auth, account, workspaces, roles, invitations, projects, documents, activity, vault):
     app.include_router(module.router, prefix="/api")
 app.include_router(account.users_router, prefix="/api")

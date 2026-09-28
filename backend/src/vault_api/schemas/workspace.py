@@ -77,7 +77,8 @@ class MemberOut(APIModel):
     all_projects: bool
     projects: list[ProjectRef]
     vault_status: VaultStatus
-    key_fingerprint: str | None
+    # The fingerprint is computed from this in the browser, never trusted from the server.
+    public_key: str | None
     can_manage: bool
 
 

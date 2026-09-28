@@ -4,7 +4,9 @@ import {
   BellRing,
   CheckCheck,
   FolderPlus,
+  Hourglass,
   KeyRound,
+  Lock,
   Mail,
   ShieldAlert,
   UserCog,
@@ -32,6 +34,10 @@ const ICONS: Record<string, LucideIcon> = {
   "member.removed": UserMinus,
   "workspace.deleted": ShieldAlert,
   "workspace.ownership_received": KeyRound,
+  "vault.access_granted": Lock,
+  "vault.access_pending": Hourglass,
+  "vault.setup_reminder": ShieldAlert,
+  "vault.key_changed": ShieldAlert,
 }
 
 export function useNotificationActions() {

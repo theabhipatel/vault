@@ -25,6 +25,7 @@ import { NewDocumentDialog } from "@/components/new-document-dialog"
 import { Page, PageHeader } from "@/components/page"
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states"
 import { UserAvatar } from "@/components/user-avatar"
+import { ProjectVaultBanner } from "@/components/vault/project-vault-banner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -208,6 +209,8 @@ export function ProjectPage() {
         </Alert>
       ) : null}
 
+      <ProjectVaultBanner workspaceId={id} project={p} canDeleteSecure={can(Perm.deleteSecure)} />
+
       <div className="text-muted-foreground mb-6 flex flex-wrap gap-x-5 gap-y-1 text-xs">
         <span>Created {shortDate(p.created_at)}{p.created_by ? ` by ${p.created_by.name}` : ""}</span>
         <span>Last activity {relativeTime(p.last_activity_at)}</span>
@@ -237,7 +240,6 @@ export function ProjectPage() {
         projectId={p.id}
         canCreateNormal={can(Perm.editDocs)}
         canCreateSecure={can(Perm.editSecure)}
-        vaultReady={false}
       />
       <EditProjectDialog open={editing} onOpenChange={setEditing} workspaceId={id} project={p} onSaved={invalidate} />
       <ConfirmDialog

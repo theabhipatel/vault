@@ -91,6 +91,23 @@ const ACTION_LABELS: Record<string, string> = {
   "document.deleted": "Deleted document",
   "document.restored": "Restored version",
   "vault.access_revoked": "Secure access revoked",
+  "vault.setup": "Set up vault",
+  "vault.password_changed": "Changed vault password",
+  "vault.recovery_regenerated": "Regenerated recovery key",
+  "vault.recovered": "Recovered vault",
+  "vault.reset": "Reset vault",
+  "vault.key_changed": "Vault key changed",
+  "vault.key_created": "Created project key",
+  "vault.key_granted": "Shared project key",
+  "vault.key_rotated": "Rotated project key",
+  "vault.rotation_scheduled": "Scheduled key rotation",
+  "vault.key_lost": "Project key lost",
+  "vault.key_abandoned": "Cleared unreadable secure documents",
+  "secure_document.created": "Created secure document",
+  "secure_document.viewed": "Fetched secure document",
+  "secure_document.updated": "Edited secure document",
+  "secure_document.restored": "Restored secure version",
+  "secure_document.renamed": "Renamed secure document",
 }
 
 export function actionLabel(action: string): string {
@@ -105,5 +122,6 @@ export const ACTION_GROUPS: { value: string; label: string }[] = [
   { value: "workspace.", label: "Workspace" },
   { value: "project.", label: "Projects" },
   { value: "document.", label: "Documents" },
+  { value: "secure_document.", label: "Secure documents" },
   { value: "vault.", label: "Vault & keys" },
 ]

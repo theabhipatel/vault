@@ -4,7 +4,7 @@ import { Eye, Lock, ShieldCheck, TriangleAlert } from "lucide-react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -22,6 +22,8 @@ import { qk } from "@/hooks/api"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import type { DocFormat, DocKind } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { VaultStateError, createSecureDocument } from "@/vault/protocol"
+import { useVault } from "@/vault/vault-context"
 
 interface Props {
   open: boolean
@@ -30,8 +32,6 @@ interface Props {
   projectId: string
   canCreateNormal: boolean
   canCreateSecure: boolean
-  /** Secure documents need the user's vault; until then the option shows a locked state. */
-  vaultReady: boolean
 }
 
 const FORMATS: Record<DocKind, { value: DocFormat; label: string }[]> = {
@@ -46,7 +46,9 @@ const FORMATS: Record<DocKind, { value: DocFormat; label: string }[]> = {
   ],
 }
 
-export function NewDocumentDialog({ open, onOpenChange, workspaceId, projectId, canCreateNormal, canCreateSecure, vaultReady }: Props) {
+export function NewDocumentDialog({ open, onOpenChange, workspaceId, projectId, canCreateNormal, canCreateSecure }: Props) {
+  const vault = useVault()
+  const vaultReady = vault.status === "unlocked"
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [kind, setKind] = useState<DocKind>(canCreateNormal ? "normal" : "secure")
@@ -54,21 +56,28 @@ export function NewDocumentDialog({ open, onOpenChange, workspaceId, projectId, 
   const [name, setName] = useState("")
 
   const create = useMutation({
-    mutationFn: () =>
-      unwrap(
+    mutationFn: async () => {
+      if (kind === "secure") {
+        // Encrypted in this browser (creating the project key first if this is the first one).
+        const created = await createSecureDocument(workspaceId, projectId, name.trim(), format, "")
+        return created.doc
+      }
+      return unwrap(
         client.POST("/api/workspaces/{workspace_id}/projects/{project_id}/documents", {
           params: { path: { workspace_id: workspaceId, project_id: projectId } },
           body: { name: name.trim(), kind, format, content: "" },
         }),
-      ),
+      )
+    },
     onSuccess: async (doc) => {
       await queryClient.invalidateQueries({ queryKey: qk.documents(workspaceId, projectId) })
       await queryClient.invalidateQueries({ queryKey: qk.projects(workspaceId) })
+      await queryClient.invalidateQueries({ queryKey: ["project-vault", workspaceId, projectId] })
       onOpenChange(false)
       setName("")
       navigate(`/w/${workspaceId}/projects/${projectId}/docs/${doc.id}`)
     },
-    onError: (error) => toast.error(errorMessage(error)),
+    onError: (error) => toast.error(error instanceof VaultStateError ? error.message : errorMessage(error)),
   })
 
   const chooseKind = (next: DocKind) => {
@@ -131,9 +140,20 @@ export function NewDocumentDialog({ open, onOpenChange, workspaceId, projectId, 
               <Alert variant="secure">
                 <Lock />
                 <AlertDescription>
-                  Secure documents are encrypted with keys from your personal vault. Set up your vault first, then come back
-                  to create secure documents.
+                  {vault.status === "none"
+                    ? "Secure documents are encrypted with keys from your personal vault. Set up your vault first."
+                    : "Unlock your vault to create secure documents."}
                 </AlertDescription>
+                <AlertAction>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secure"
+                    onClick={vault.status === "none" ? vault.openSetup : vault.openUnlock}
+                  >
+                    {vault.status === "none" ? "Set up vault" : "Unlock"}
+                  </Button>
+                </AlertAction>
               </Alert>
             ) : null}
 

@@ -3,18 +3,13 @@
 A self-hosted, multi-workspace team vault. Teams keep two kinds of documents in projects:
 
 - **Normal documents**: plain text or Markdown, protected by access control. The server can read them.
-- **Secure documents**: text, Markdown or `.env` files, **end-to-end encrypted in the browser**. The server
-  only ever stores ciphertext.
-
-> **Build status.** The project is delivered in two parts.
-> **Part 1 (this delivery)** is the full platform: accounts, workspaces, invitations, roles and permissions,
-> projects, normal documents, audit log, notifications and the complete UI.
-> **Part 2** adds the vault: key generation, unlock, secure documents, sharing, revocation and rotation,
-> recovery. Until then, secure documents show a locked "Set up your vault" state.
+- **Secure documents**: text, Markdown or `.env` files, **end-to-end encrypted in the browser**. The
+  server only ever stores ciphertext, sealed keys and public keys. It never sees a vault password,
+  a private key, a project key or a plaintext secret.
 
 ---
 
-## Quick start
+## Quick start (local development)
 
 Requirements: Docker (with Compose), Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node 20+.
 
@@ -31,148 +26,309 @@ missing, runs migrations, and starts the API and the web app:
 | API docs (dev only) | http://localhost:8000/api/docs |
 | Mailpit (all outgoing email) | http://localhost:8025 |
 
-Sign up, open the verification email in Mailpit, and you'll be taken through onboarding.
+Sign up, open the verification email in Mailpit, name your workspace and set up your vault.
 
-### Running the parts yourself
+To run the parts by hand:
 
 ```bash
-docker compose up -d                           # Postgres :5433, Mailpit :1025/:8025
+docker compose up -d                           # Postgres :5433 (+ vault_test DB), Mailpit :1025/:8025
 cd backend && cp .env.example .env && uv sync
 uv run alembic upgrade head
 uv run uvicorn vault_api.main:app --reload --port 8000 --proxy-headers
 cd ../frontend && npm install && npm run dev   # http://localhost:5180
 ```
 
+`npm run build && npm run preview` serves the production build with the production Content Security
+Policy. The dev server can't enforce it, because Vite's hot reload needs inline scripts.
+
 ### Tests and checks
 
 ```bash
-make test     # backend: auth flows, CSRF, lockout, permission and hierarchy rules (real Postgres)
-make check    # ruff + mypy --strict, tsc (strict) + oxlint, production build
-make gen-api  # regenerate frontend/src/lib/api-schema.ts from the backend's OpenAPI schema
+make test                   # backend: pytest against a real Postgres
+cd frontend && npm test     # frontend: vitest, the crypto flows with the real libsodium + WebCrypto
+make check                  # ruff + mypy --strict, tsc (strict) + oxlint, production build
+make gen-api                # regenerate the typed API client from the backend's OpenAPI schema
 ```
 
-Tests use the `vault_test` database that Docker Compose creates on first start.
+What the tests cover:
 
-### Configuration
+| Area | Where |
+|---|---|
+| Vault setup, unlock, wrong password, private key bound to its owner | `frontend/src/vault/crypto.test.ts` |
+| Recovery key, password change (same keypair), recovery flow, old recovery key revoked | same |
+| Cross-user sharing: Alice encrypts, Bob's separately unlocked vault decrypts | same |
+| Sealed keys only open for their recipient, project and key version | same |
+| Ciphertext swap and replay between documents, versions, key versions and projects fails | same |
+| Rotation: every version re-encrypted; the removed user's old key opens nothing new | same |
+| Vault reset: keys sealed to the old keypair become useless | same |
+| `.env` parsing and serialisation | `frontend/src/vault/env.test.ts` |
+| Server vault rules: key init, grant validation, pending access, revocation, atomic rotation, reset, secure-doc access | `backend/tests/test_vault.py` |
+| Permission and hierarchy rules (pure, and enforced over HTTP) | `backend/tests/test_permission_rules.py`, `test_workspaces.py` |
+| Auth: verification, lockout, CSRF, generic errors, pre-account-takeover, sessions | `backend/tests/test_auth.py` |
 
-Every setting is listed with comments in [backend/.env.example](backend/.env.example) and
+### Production deployment
+
+```bash
+cp backend/.env.example .env.prod    # set APP_URL, SECRET_KEY, SMTP_*, COOKIE_SECURE=true, POSTGRES_PASSWORD
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+This runs three containers. The `api` container applies migrations and serves uvicorn. The `web`
+container is nginx serving the built SPA with a strict CSP and security headers, and proxying `/api`.
+Postgres is the third. Put TLS in front of port 8080 (a load balancer or Caddy/Traefik) and keep
+`COOKIE_SECURE=true`.
+
+Every setting is documented in [backend/.env.example](backend/.env.example) and
 [frontend/.env.example](frontend/.env.example). Google sign-in is optional: set `GOOGLE_CLIENT_ID` and
-`GOOGLE_CLIENT_SECRET` and register `<APP_URL>/api/auth/google/callback` as the redirect URI. The
-button appears automatically.
+`GOOGLE_CLIENT_SECRET` and register `<APP_URL>/api/auth/google/callback` as the redirect URI.
 
 ---
 
 ## Architecture
 
 ```
-browser ──► /  (React SPA, built by Vite)
-        └─► /api/*  ──► FastAPI ──► PostgreSQL
+browser ──► /        React SPA (Vite build; every script and style carries an SRI hash)
+        │            └─ vault: libsodium (Argon2id, X25519 sealed boxes) + WebCrypto (AES-256-GCM)
+        └─► /api/*   FastAPI ──► PostgreSQL
                           └─► email outbox ──► SMTP (Mailpit in dev)
 ```
 
-The SPA and the API are always served from **one origin** (the Vite proxy in development, a reverse
-proxy in production). Cookies stay first-party, and CORS stays closed.
+The SPA and the API are always served from **one origin**. Cookies stay first-party and CORS stays
+closed.
 
-**Backend** (`backend/src/vault_api`): FastAPI, fully typed (`mypy --strict`).
-- SQLAlchemy 2 (async, asyncpg) with Alembic migrations.
-- `permissions.py` holds the permission catalogue, default roles and the **pure** hierarchy rules, unit
-  tested directly.
-- `deps.py` resolves the acting user from the session cookie and their role in the workspace from the URL.
-  Identity never comes from request data.
-- `services/access.py` computes project visibility and "who has secure access to which project".
-  Every change that could alter secure access (role, permissions, project assignment, membership) takes a
-  snapshot before and diffs after. Losses trigger the revocation flow, gains queue key grants. Part 2
-  attaches the key operations to these hooks.
-- Email uses a transactional **outbox**: emails are committed in the same transaction as the change,
-  then a worker delivers them with retries and backoff. Multiple instances are safe (`SKIP LOCKED`).
-- Rate limits live in PostgreSQL, so they hold across instances.
+**Backend** (`backend/src/vault_api`): FastAPI, fully typed (`mypy --strict`), SQLAlchemy 2 (async)
+with Alembic.
+- `permissions.py` holds the permission catalogue, default roles and the hierarchy rules, as pure,
+  unit-tested functions.
+- `services/access.py` computes project visibility and who has secure access to which project. Any
+  change that can alter secure access (role, permissions, project assignment, membership) takes a
+  snapshot before and diffs after, then calls the vault's grant and revocation hooks.
+- `services/vault.py` and `routers/vault.py` hold the server side of the vault: entitlement, grant
+  validation, revocation, rotation bookkeeping and secure-document storage.
+- Emails go through a transactional outbox with a retrying worker. Rate limits live in Postgres.
 
-**Frontend** (`frontend/src`): React 19, TypeScript strict, Vite, Tailwind v4, shadcn/ui (Radix).
-- A typed API client is generated from the backend's OpenAPI schema (`openapi-typescript` +
-  `openapi-fetch`); no hand-written API types.
-- TanStack Query for server state, React Router for routing, react-hook-form + zod for forms.
-- The theme lives in `src/index.css`: all colours (OKLCH), fonts, radii and shadows are tokens, with
-  light and dark designed separately. Secure content has its own amber accent everywhere.
-  `public/theme-init.js` applies the saved theme before first paint, so there's no flash.
-
----
-
-## Permissions model
-
-Roles are ranked: **Owner > Admin > Manager > Member**, plus any custom roles placed in the ladder.
-The server enforces, on every request:
-
-- You can only manage people and roles ranked **strictly below** your own.
-- You can only grant or remove permissions **you hold yourself** (this also covers creating roles and
-  assigning them).
-- Only the owner manages admins and edits the Admin role. The Owner role can't be edited, assigned
-  or deleted, only transferred.
-- The database guarantees exactly one owner per workspace (a partial unique index).
-- Members see only projects they're assigned to, unless their role has "access all projects".
-  Project-scoped permissions (edit project, manage members, documents) only apply inside visible
-  projects. That is how "Managers: own assigned projects" works.
-- Deleting a role in use requires a replacement, and its members and pending invitations move over.
+**Frontend** (`frontend/src`): React 19, strict TypeScript, Vite, Tailwind v4, shadcn/ui restyled
+entirely through theme tokens (`src/index.css`).
+- `src/vault/crypto.ts` holds all cryptography. `kdf.worker.ts` runs Argon2id in a Web Worker.
+  `session.ts` keeps keys in memory. `protocol.ts` covers key creation, encrypt and decrypt, grants
+  and rotation. `trust.ts` pins public keys (trust on first use).
+- A typed API client is generated from the backend's OpenAPI schema.
 
 ---
 
 ## Security model
 
-### Accounts and sessions
-- Login passwords are hashed with **Argon2id** (RFC 9106 parameters). The login password is unrelated
-  to encryption; the vault password (Part 2) is separate and never sent to the server.
-- Sessions are random 256-bit tokens in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` and
-  `__Host-` prefixed when `COOKIE_SECURE=true`). Only a SHA-256 of the token is stored. Sessions have
-  an absolute and an idle expiry, and can be listed and revoked individually or all at once.
-  Changing or resetting a password signs out other sessions.
-- **CSRF:** mutating requests need a matching double-submit token (the cookie value echoed in
-  `X-CSRF-Token`) and, when present, an `Origin` equal to `APP_URL`.
-- **Enumeration resistance:** sign-up, forgot-password and resend-verification return the same response
-  whether or not the address exists. Sign-in failures share one message, and missing accounts cost the
-  same Argon2 time.
-- **Rate limiting and lockout:** per-IP limits on sign-in and email-sending endpoints; 5 failed
-  sign-ins per address per 15 minutes locks that address. This applies equally to addresses that
-  don't exist.
-- **Pre-account-takeover protection:** a sign-up password is bound to its own verification link, so an
-  unverified sign-up by someone else can't decide your password. Linking Google to an unverified
-  account clears that account's unproven password.
-- Google sign-in uses the authorization-code flow with PKCE and a signed, short-lived state cookie.
-  Accounts are matched by Google's verified email.
-- Security headers on every API response (`nosniff`, `frame-ancestors 'none'`, `no-referrer`,
-  COOP/CORP, `no-store`, HSTS over HTTPS). Tokens and key material never appear in URLs, logs or
-  error bodies. The only exception is the single-use email links themselves.
+### Goal and threat model
 
-### Audit log
-Append-only by construction: a PostgreSQL trigger rejects `UPDATE`, `DELETE` and `TRUNCATE` on
-`audit_logs`. Entries record who, what, when, IP, user agent and result. They never contain document
-content, passwords or key material, and they survive deletion of the user or workspace they describe.
+**Design goal:** an attacker who fully compromises the server gets nothing readable. That includes the
+server, the database, the backend code, backups and every stored encrypted blob. They can't decrypt
+a single secure document.
 
-### End-to-end encryption (Part 2)
-Argon2id → KEK → AES-256-GCM-wrapped X25519 private key; per-project 256-bit keys sealed per member with
-libsodium sealed boxes; AES-256-GCM content encryption bound to its location through associated data;
-recovery key; rotation on revocation. The full key hierarchy and threat model will be documented here
-with the implementation.
+Everything the server stores for secure documents is one of the following:
 
-### Known limitation (inherent to browser-based E2EE)
-Stored data is designed to stay safe under full server compromise. However, an attacker who controls
-the **live** server could serve modified JavaScript that captures a vault password the next time a
-user unlocks. Every browser-based end-to-end encrypted app shares this limitation. Mitigations:
-self-hosted assets only (no third-party scripts, fonts or CDNs; fonts are bundled), a strict Content
-Security Policy, and Subresource Integrity. Part 2 finalises these.
+| Stored | What it is | Useful to an attacker? |
+|---|---|---|
+| Public key (X25519) | Per user, in the clear | No |
+| Encrypted private key (×2) | AES-256-GCM under a password-derived key, and under the recovery key | Only with the vault password (Argon2id-hardened) or the 256-bit recovery key |
+| Argon2id salt and parameters | Per user | No |
+| Sealed project keys | libsodium sealed box to one member's public key | Only with that member's private key |
+| Document ciphertext | AES-256-GCM, fresh 96-bit nonce, bound to its location through additional authenticated data | Only with the project key |
+
+Normal documents are **out of scope** for end-to-end encryption: they are access-controlled and
+readable by the server. The UI says so on every normal document.
+
+### Algorithms
+
+| Purpose | Algorithm | Implementation |
+|---|---|---|
+| Vault password → KEK | **Argon2id**, 16-byte random salt, 32-byte output. At least 64 MiB and 3 passes; calibrated per device to about 1 s (memory first, up to 256 MiB, then passes). Parameters stored per user. | libsodium.js (sumo) in a Web Worker |
+| User keypair | **X25519** | libsodium `crypto_box_keypair` |
+| Sharing a project key | **Sealed box** (`crypto_box_seal`) to the recipient's public key | libsodium |
+| Private key and all secure content | **AES-256-GCM**, random 96-bit nonce per encryption | WebCrypto |
+| Randomness | `crypto.getRandomValues` / libsodium's CSPRNG | browser |
+| Login passwords (server, unrelated) | Argon2id | argon2-cffi |
+
+No custom cryptographic primitives are used; only the compositions described here.
+
+### Key hierarchy
+
+```
+vault password ──Argon2id(salt, params)──► KEK ──AES-GCM──► X25519 private key  (stored encrypted)
+recovery key (256 bit) ──────────────────────AES-GCM──► same private key        (second copy)
+
+project key vN (256 bit, random) ──sealed box──► one copy per member with secure access
+project key vN ──AES-GCM──► every secure document version in the project
+```
+
+**Binding (additional authenticated data).** Every ciphertext names where it belongs, so a malicious
+server can't swap or replay blobs undetected:
+
+- private key: `vault:v1|private-key|<password|recovery>|user:<id>|pk:<public key>`
+- documents: `vault:v1|document|ws:<id>|project:<id>|doc:<id>|ver:<n>|key:<key version>|format:<fmt>`
+- sealed project keys: sealed boxes have no AAD, so the sealed payload carries
+  `SHA-256("vault:v1|project-key|<project>|<version>")[0:16]` after the key, and is checked on opening.
+- On unlock, the public key is recomputed from the decrypted private key and must match the stored one.
+
+### Lifecycle
+
+- **Vault setup (skippable, prompted after the first workspace):**
+  1. The browser generates the keypair.
+  2. It calibrates Argon2id and derives the KEK.
+  3. It encrypts the private key twice: once with the KEK, once with a new recovery key.
+  4. It uploads only public and encrypted material.
+
+  The recovery key is shown once: grouped, with copy and download buttons and an "I have saved it"
+  confirmation. Minimum 12 characters and a strength check apply, with advice to use something
+  different from the login password.
+- **Unlock:**
+  - The private key lives only in JavaScript memory as a byte array, overwritten on lock.
+  - Project keys are imported as **non-extractable** WebCrypto keys. Their raw bytes exist only
+    briefly while being re-sealed for a teammate, and are wiped afterwards.
+  - Nothing goes to localStorage, sessionStorage, IndexedDB or cookies, to the server, or to logs.
+  - Decrypted content is purged from the query cache on lock.
+  - The vault locks after inactivity (15 minutes by default; 5, 15, 30 or 60 is selectable), on
+    sign-out, and on reload or tab close. The lock state is always visible in the top bar.
+- **First secure document in a project:** the creator's browser generates the project key and seals it
+  for itself and for every member with secure access and a vault.
+- **Granting (new member, role change, project assignment):**
+  - The server computes pending grants: people who are entitled, have a vault and hold no copy of
+    the current key.
+  - Whenever any key holder's vault is unlocked (on unlock and every 60 s), their browser seals the
+    key for them in the background, with no manual step.
+  - The recipient sees "Secure access pending" until then, and gets a notification when access
+    arrives.
+- **Revocation (removed from a project or workspace, role loses secure access, vault reset):**
+  1. The server immediately stops serving that user anything from the project and deletes their
+     sealed copies.
+  2. If they ever held the key, the project is marked **rotation pending**.
+  3. The next key holder's browser generates key version N+1, decrypts and re-encrypts **every secure
+     document and every stored version** (fresh nonces, new AAD), and seals the new key for the
+     remaining members.
+  4. It submits everything in one request. The server applies it in **one transaction**, only if the
+     key version is unchanged and the set of (document, version) ciphertexts matches exactly.
+     Otherwise nothing changes and the browser retries. A rotation is never half-applied.
+  5. Old sealed copies are then deleted.
+- **Change vault password:** the same private key is re-wrapped under a new salt. Nothing is
+  re-shared. The current password is verified in the browser first.
+- **Forgot vault password, has recovery key:** the recovery key decrypts the private key, then the
+  user sets a new password and gets a new recovery key. The old recovery key stops working.
+- **Forgot both: vault reset.**
+  - The user gets a new keypair and password. All their sealed copies are discarded, and projects
+    they held keys for are rotated.
+  - They return to "pending" until teammates re-grant.
+  - Before confirming, the UI lists every project where they are the **only** key holder. Those
+    become permanently unreadable, and nobody can recover them, operators included. Such a project
+    can later be cleared and restarted with a fresh key.
+
+### Public key authenticity
+
+A compromised server could hand out a fake public key to receive sealed project keys itself. These
+measures counter that:
+
+- Every user has a **fingerprint**: the first 128 bits of SHA-256 of their public key. It is
+  **computed in the browser**, shown in Vault settings and in the members list, and meant to be
+  compared out of band.
+- Browsers **pin** the public keys they have sealed to (trust on first use, stored per user in
+  localStorage, since public keys aren't secret). If a key changes, nothing is sealed to that person
+  until the user sees a loud warning comparing old and new fingerprints and confirms.
+- Every key change (vault reset) is written to the audit log of each workspace the user belongs to,
+  and notifies that workspace's admins.
+
+### Accounts, sessions and the API
+
+- **Passwords and sessions:**
+  - Login passwords use Argon2id. The login password never touches encryption.
+  - Sessions are random 256-bit tokens in `HttpOnly`, `SameSite=Lax` cookies (`Secure` and
+    `__Host-` with HTTPS), stored hashed. They have absolute and idle expiry and can be revoked
+    per device.
+  - Changing or resetting the password signs out other sessions.
+- **CSRF:** a double-submit token plus an Origin check on every mutating request.
+- **Resistance to guessing and enumeration:**
+  - Generic responses on sign-up, forgot-password and sign-in, with timing equalised for missing
+    accounts.
+  - Per-IP rate limits, plus a per-address lockout (5 failures per 15 minutes) that behaves the
+    same for addresses that don't exist.
+- **Account takeover:** a sign-up password is bound to its own verification link. Linking Google to
+  an unverified account clears that account's unproven password.
+- **Enforced on the server:** every permission and hierarchy rule runs on every request. The acting
+  identity always comes from the session, never from request data.
+- **Audit log:**
+  - A PostgreSQL trigger rejects `UPDATE`, `DELETE` and `TRUNCATE`.
+  - It records secure-document views (when ciphertext is fetched), key creation, grants, rotations
+    and vault events.
+  - It never contains content, passwords or key material. The browser run checks the database for
+    the plaintext secret and finds zero occurrences.
+- **Headers and front-end integrity:**
+  - The SPA gets a strict CSP: scripts only from our own origin, no inline scripts, no `eval`.
+    `wasm-unsafe-eval` is allowed only so libsodium's WebAssembly can compile.
+  - Every script, stylesheet and module preload in `index.html` carries a sha384 **Subresource
+    Integrity** hash.
+  - No third-party scripts, fonts or CDNs: fonts are bundled, and `data:` asset inlining is disabled.
+  - Also set: `frame-ancestors 'none'`, `nosniff`, `no-referrer`, COOP and HSTS.
+
+### Known limitations (read these)
+
+1. **A live server compromise can still steal future secrets.** Stored data stays safe under full
+   server compromise. But an attacker who controls the **live** server can serve modified JavaScript
+   that captures a vault password (or decrypted content) the next time a user unlocks. This is
+   inherent to every browser-based end-to-end encrypted application. CSP, same-origin-only assets
+   and SRI shrink the attack surface: they block injected third-party scripts and tampered CDN
+   files. They can't help if the attacker replaces `index.html` itself, because it carries the
+   hashes. Organisations that need more should distribute the frontend through a channel the server
+   can't alter, such as a signed browser extension or desktop app.
+2. **Pinning is per browser.** The key-change warning relies on the browser remembering keys. On a
+   fresh browser, the first key seen is trusted. Comparing fingerprints out of band is the real
+   defence.
+3. **Metadata isn't encrypted.** Server-visible metadata includes:
+   - document and project names (the UI warns you not to put secrets in names), formats and sizes;
+   - who accessed what and when;
+   - membership.
+4. **JavaScript can't guarantee memory hygiene.** Keys are held as wiped byte arrays and
+   non-extractable CryptoKeys, but passwords and decrypted text are JavaScript strings, which can't
+   be zeroed. They disappear only when garbage-collected.
+5. **CSP allows inline styles** (`style-src 'unsafe-inline'`) because the UI library injects small
+   `<style>` elements. Scripts remain strictly controlled.
+6. **Rotation is one request.** Very large projects (hundreds of MB of secure history) are limited by
+   the 256 MB request cap on the rotation endpoint.
+7. **Clipboard clearing is best effort.** Copied secrets are cleared after 30 s only where the browser
+   allows clipboard access.
+
+---
+
+## Permissions model
+
+Roles are ranked: **Owner > Admin > Manager > Member**, plus custom roles placed anywhere below your
+own. The server enforces these rules on every request:
+
+- **Rank:** you can only manage people and roles ranked **strictly below** your own.
+- **Grants:** you can only grant or remove permissions **you hold yourself**. This includes creating
+  roles and assigning them.
+- **Owner:**
+  - Only the owner manages admins and edits the Admin role.
+  - The Owner role can't be edited, assigned or deleted, only transferred.
+  - The database guarantees exactly one owner per workspace.
+- **Projects:** members see only the projects assigned to them, unless their role has "access all
+  projects". Project-scoped permissions apply only inside visible projects.
+- **Secure access:** secure access to a project means the role has "view secure documents" and the
+  user can see the project. Losing it triggers the revocation flow above.
 
 ---
 
 ## Repository layout
 
 ```
-docker-compose.yml        Postgres + Mailpit for local development
-scripts/dev.sh            one-command local run
+docker-compose.yml          Postgres + Mailpit for development
+docker-compose.prod.yml     Postgres + API + nginx web (production-style)
+scripts/dev.sh              one-command local run
 backend/
-  src/vault_api/          FastAPI app (routers, services, models, permissions)
-  migrations/             Alembic migrations (includes the audit-log trigger)
-  tests/                  pytest suite against a real Postgres
+  src/vault_api/            FastAPI app: routers, services (access, vault, email, audit), models
+  migrations/               Alembic migrations (incl. the append-only audit trigger)
+  tests/                    pytest against a real Postgres
+  Dockerfile
 frontend/
-  src/components/ui/      shadcn components (CLI-generated, restyled via tokens)
-  src/components/         app components (layout, dialogs, states)
-  src/routes/             pages
-  src/lib/                API client, generated schema types, theme, helpers
+  src/vault/                browser cryptography, key session, protocol, pinning, .env parser (+ tests)
+  src/components/vault/     vault dialogs, recovery key panel, .env editor, fingerprints, status
+  src/components/ui/        shadcn components (CLI-generated, restyled via tokens)
+  src/routes/               pages
+  Dockerfile, nginx.conf    production image with CSP
 ```

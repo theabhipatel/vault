@@ -6,12 +6,17 @@ import { qk } from "@/hooks/api"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import { useTheme } from "@/lib/theme"
 import type { Me, ThemePreference } from "@/lib/types"
+import { vaultSession } from "@/vault/session"
 
 export function useSignOut() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   return useMutation({
-    mutationFn: () => unwrap(client.POST("/api/auth/signout")),
+    mutationFn: () => {
+      // Lock first: keys leave memory even if the network request fails.
+      vaultSession.lock()
+      return unwrap(client.POST("/api/auth/signout"))
+    },
     onSettled: () => {
       queryClient.clear()
       queryClient.setQueryData(qk.me, null)

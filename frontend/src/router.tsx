@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
-      { path: "/", element: <HomeRedirect /> },
+      { path: "/app", element: <HomeRedirect /> },
       { path: "/onboarding", element: <OnboardingPage /> },
       {
         element: <AppShell />,

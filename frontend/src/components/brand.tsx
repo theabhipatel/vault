@@ -25,7 +25,7 @@ export function LogoMark({ className }: { className?: string }) {
   )
 }
 
-export function Logo({ className, name = "Vault" }: { className?: string; name?: string }) {
+export function Logo({ className, name = "Secure Vault" }: { className?: string; name?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)}>
       <LogoMark />

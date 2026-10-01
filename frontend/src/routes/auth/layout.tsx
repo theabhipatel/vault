@@ -1,6 +1,5 @@
 import type { ReactNode } from "react"
 import { Fingerprint, KeyRound, ShieldCheck } from "lucide-react"
-import { Link } from "react-router"
 
 import { Logo } from "@/components/brand"
 
@@ -28,9 +27,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <aside className="relative hidden overflow-hidden border-r bg-surface lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="bg-vault-glow pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="bg-vault-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_30%_20%,black,transparent_70%)]" aria-hidden="true" />
-        <Link to="/" className="relative w-fit rounded-lg">
+        <a href="/" className="relative w-fit rounded-lg">
           <Logo />
-        </Link>
+        </a>
         <div className="relative max-w-md space-y-10">
           <h2 className="text-[2.1rem] leading-[1.15] font-semibold">
             Your team's secrets,{" "}
@@ -56,9 +55,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       </aside>
       <main className="relative flex flex-col px-4 py-8 sm:px-8">
         <div className="lg:hidden">
-          <Link to="/" className="inline-flex rounded-lg">
+          <a href="/" className="inline-flex rounded-lg">
             <Logo />
-          </Link>
+          </a>
         </div>
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-[400px]">{children}</div>
@@ -91,5 +90,5 @@ export function GoogleIcon() {
 /** Only allow same-site relative redirect targets. */
 export function safeNext(value: string | null): string {
   if (value && value.startsWith("/") && !value.startsWith("//") && !value.includes("\\")) return value
-  return "/"
+  return "/app"
 }

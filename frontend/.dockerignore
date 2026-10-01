@@ -2,3 +2,4 @@ node_modules
 dist
 openapi.json
 .env
+dist-ssr

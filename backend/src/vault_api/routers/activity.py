@@ -68,6 +68,16 @@ async def _rows_out(db: DB, rows: list[AuditLog]) -> list[ActivityOut]:
     ]
 
 
+def _hide_secure_activity(ctx: WorkspaceContext) -> list[ColumnElement[bool]]:
+    """Without secure-document access, secure documents (even their names) stay out of the feed."""
+    if ctx.actor.has(Perm.SECURE_VIEW):
+        return []
+    return [
+        ~AuditLog.action.startswith("secure_document."),
+        AuditLog.details["kind"].astext.is_distinct_from("secure"),
+    ]
+
+
 @router.get("/workspaces/{workspace_id}/activity")
 async def activity_feed(
     ctx: WsCtx, db: DB, limit: int = Query(default=15, ge=1, le=50)
@@ -83,6 +93,7 @@ async def activity_feed(
                     or_(*(AuditLog.action.startswith(p) for p in FEED_PREFIXES)),
                     AuditLog.action.not_in(FEED_EXCLUDE),
                     AuditLog.result == "success",
+                    *_hide_secure_activity(ctx),
                 )
                 .order_by(AuditLog.id.desc())
                 .limit(limit)

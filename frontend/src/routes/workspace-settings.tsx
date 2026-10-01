@@ -64,7 +64,7 @@ export function WorkspaceSettingsPage() {
       await queryClient.invalidateQueries({ queryKey: qk.me })
       queryClient.removeQueries({ queryKey: qk.workspace(id) })
       toast.success(res.message)
-      navigate("/", { replace: true })
+      navigate("/app", { replace: true })
     },
     onError: (error) => toast.error(errorMessage(error)),
   })
@@ -81,7 +81,7 @@ export function WorkspaceSettingsPage() {
       await queryClient.invalidateQueries({ queryKey: qk.workspaces })
       await queryClient.invalidateQueries({ queryKey: qk.me })
       toast.success(res.message)
-      navigate("/", { replace: true })
+      navigate("/app", { replace: true })
     },
     onError: (error) => toast.error(errorMessage(error)),
   })

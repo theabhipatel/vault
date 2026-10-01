@@ -9,6 +9,10 @@ from vault_api.schemas.common import APIModel, EmailIn, Name, Password
 Theme = Literal["light", "dark", "system"]
 
 
+class SessionStatus(APIModel):
+    signed_in: bool
+
+
 class PublicConfig(APIModel):
     app_name: str
     google_enabled: bool

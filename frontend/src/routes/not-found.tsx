@@ -23,7 +23,7 @@ export function NotFoundContent({
       <h1 className="mt-2 text-3xl font-semibold">{title}</h1>
       <p className="text-muted-foreground mt-3 max-w-md text-sm leading-relaxed">{description}</p>
       <Button className="mt-8" asChild>
-        <Link to="/">
+        <Link to="/app">
           <ArrowLeft /> Back to your workspace
         </Link>
       </Button>
@@ -35,9 +35,9 @@ export function NotFoundPage() {
   return (
     <div className="bg-vault-glow flex min-h-dvh flex-col">
       <header className="px-4 py-5 sm:px-8">
-        <Link to="/" className="inline-flex rounded-lg">
+        <a href="/" className="inline-flex rounded-lg">
           <Logo />
-        </Link>
+        </a>
       </header>
       <NotFoundContent />
     </div>

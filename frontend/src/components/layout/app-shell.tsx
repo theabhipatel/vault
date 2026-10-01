@@ -149,11 +149,11 @@ export function PublicOnly() {
   const location = useLocation()
   if (isPending) return <FullPageSpinner />
   // The verification link must work even if a different account is signed in.
-  if (me && location.pathname !== "/verify-email") return <Navigate to="/" replace />
+  if (me && location.pathname !== "/verify-email") return <Navigate to="/app" replace />
   return <Outlet />
 }
 
-/** "/" → the right place for this user. */
+/** "/app" → the right place for this user. */
 export function HomeRedirect() {
   const { data: me } = useMe()
   const { data: workspaces, isPending } = useWorkspaces()

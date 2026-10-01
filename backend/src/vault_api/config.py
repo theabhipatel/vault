@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # Public origin of the web app. Used for email links, the Origin check and CORS.
     app_url: str = "http://localhost:29180"
-    app_name: str = "Vault"
+    app_name: str = "Secure Vault"
 
     database_url: str = "postgresql+asyncpg://vault:vault@localhost:29432/vault"
     database_echo: bool = False
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     smtp_starttls: bool = False
     smtp_tls: bool = False
-    mail_from: str = "Vault <no-reply@vault.local>"
+    mail_from: str = "Secure Vault <no-reply@vault.local>"
     email_worker_enabled: bool = True
 
     # Google sign-in (optional; the button is hidden when unset)

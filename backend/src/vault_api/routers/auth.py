@@ -16,12 +16,13 @@ from sqlalchemy import delete, select
 
 from vault_api.config import get_settings
 from vault_api.db import utcnow
-from vault_api.deps import DB, CurrentAuth, Meta
+from vault_api.deps import DB, CurrentAuth, Meta, load_session
 from vault_api.models import EmailToken, User, UserSession
 from vault_api.schemas.auth import (
     Me,
     PublicConfig,
     ResetPasswordIn,
+    SessionStatus,
     SigninIn,
     SignupIn,
     TokenIn,
@@ -66,6 +67,13 @@ async def public_config() -> PublicConfig:
 @router.get("/me")
 async def get_me(auth: CurrentAuth) -> Me:
     return me(auth.user)
+
+
+@router.get("/session")
+async def session_status(request: Request, db: DB) -> SessionStatus:
+    """Whether the browser is signed in, without a 401 (used by the public pages)."""
+    auth = await load_session(db, request.cookies.get(get_settings().session_cookie_name))
+    return SessionStatus(signed_in=auth is not None)
 
 
 @router.post("/signup", status_code=status.HTTP_202_ACCEPTED)
@@ -254,7 +262,7 @@ def _safe_next(value: str | None) -> str:
     """Only allow same-site relative paths, preventing open redirects."""
     if value and value.startswith("/") and not value.startswith("//") and "\\" not in value:
         return value
-    return "/"
+    return "/app"
 
 
 def _fail(message: str) -> RedirectResponse:

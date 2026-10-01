@@ -80,7 +80,7 @@ export function VerifyEmailPage() {
     onSuccess: (me) => {
       queryClient.setQueryData(qk.me, me)
       toast.success("Email verified. Welcome to Vault.")
-      navigate("/", { replace: true })
+      navigate("/app", { replace: true })
     },
   })
 

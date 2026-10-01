@@ -437,3 +437,44 @@ async def test_secure_document_events_and_denials(client: Client) -> None:
     # Deleting a secure document is filed under secure documents.
     assert (await client.delete(url)).status_code == 200
     assert await audit_rows(client, ws, "secure_document.deleted")
+
+
+async def test_activity_feed_hides_secure_documents_without_secure_access(client: Client) -> None:
+    owner = await signup_and_verify(client)
+    ws = owner["workspace_id"]
+    pid = await project(client, ws)
+    roles = {r["name"]: r for r in (await client.get(f"/api/workspaces/{ws}/roles")).json()}
+    res = await client.post(
+        f"/api/workspaces/{ws}/roles",
+        json={
+            "name": "Reader",
+            "permissions": ["docs.view"],
+            "place_below_role_id": roles["Member"]["id"],
+        },
+    )
+    assert res.status_code == 201, res.text
+    reader, _ = await add_member(client, ws, "Reader", name="Reader", project_ids=[pid])
+    owner_pk = await setup_vault(client)
+    await client.post(f"{base(ws, pid)}/init", json={"grants": [grant(owner["id"], owner_pk)]})
+    secret = await secure_doc(client, ws, pid)
+    res = await client.post(
+        f"/api/workspaces/{ws}/projects/{pid}/documents",
+        json={"name": "Runbook", "kind": "normal", "format": "markdown", "content": "hi"},
+    )
+    assert res.status_code == 201
+
+    def labels(rows: list[dict[str, Any]]) -> set[str]:
+        return {str(r["target_label"]) for r in rows}
+
+    owner_feed = (await client.get(f"/api/workspaces/{ws}/activity")).json()
+    reader_feed = (await reader.get(f"/api/workspaces/{ws}/activity")).json()
+    assert {"Runbook", secret["name"]} <= labels(owner_feed)
+    assert "Runbook" in labels(reader_feed)
+    assert secret["name"] not in labels(reader_feed)
+    assert not any(r["action"].startswith("secure_document.") for r in reader_feed)
+
+
+async def test_session_status_never_401s(client: Client) -> None:
+    assert (await client.get("/api/auth/session")).json() == {"signed_in": False}
+    await signup_and_verify(client)
+    assert (await client.get("/api/auth/session")).json() == {"signed_in": True}

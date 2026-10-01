@@ -44,7 +44,9 @@ packages, runs migrations, and starts the API and the web app. Ctrl+C stops both
 
 | What | URL |
 |---|---|
-| Web app | http://localhost:29180 |
+| Website (landing page) | http://localhost:29180 |
+| Documentation | http://localhost:29180/docs |
+| Web app | http://localhost:29180/app (sign-up at `/signup`) |
 | API docs (dev only) | http://localhost:29100/api/docs |
 | Mailpit (all outgoing email) | http://localhost:29825 |
 
@@ -121,10 +123,11 @@ Every setting is documented in [backend/.env.example](backend/.env.example) and
 ## Architecture
 
 ```
-browser ──► /        React SPA (Vite build; every script and style carries an SRI hash)
-        │            └─ vault: libsodium (Argon2id, X25519 sealed boxes) + WebCrypto (AES-256-GCM)
-        └─► /api/*   FastAPI ──► PostgreSQL
-                          └─► email outbox ──► SMTP (Mailpit in dev)
+browser ──► /, /docs/*, /privacy   public site: pre-rendered static HTML (SEO), hydrated by a small bundle
+        ├─► /app, /login, /w/* …   React SPA (every script and style carries an SRI hash)
+        │                          └─ vault: libsodium (Argon2id, X25519 sealed boxes) + WebCrypto (AES-256-GCM)
+        └─► /api/*                 FastAPI ──► PostgreSQL
+                                        └─► email outbox ──► SMTP (Mailpit in dev)
 ```
 
 The SPA and the API are always served from **one origin**. Cookies stay first-party and CORS stays
@@ -147,6 +150,20 @@ entirely through theme tokens (`src/index.css`).
   `session.ts` keeps keys in memory. `protocol.ts` covers key creation, encrypt and decrypt, grants
   and rotation. `trust.ts` pins public keys (trust on first use).
 - A typed API client is generated from the backend's OpenAPI schema.
+
+**Public site** (`frontend/src/site`): the landing page, the documentation and the privacy page.
+- A separate entry (`site.html`, `src/site/entry-client.tsx`) with its own small, code-split bundle;
+  the app is never loaded on public pages.
+- `npm run build` pre-renders every public page to static HTML (`scripts/prerender.mjs`, using
+  React Router's static handler) with per-page titles, meta, Open Graph tags and JSON-LD, then
+  writes `robots.txt` and, when `VITE_SITE_URL` is set, `sitemap.xml`. The browser hydrates the
+  same markup; loader data travels in a JSON data block, so the strict CSP still applies.
+- Docs are Markdown files in `src/site/docs/content/`, listed in `src/site/docs/catalog.ts`.
+- Build output: `dist/index.html` (landing), `dist/docs/<page>/index.html`, `dist/privacy/index.html`
+  and `dist/app.html` (the app shell). Servers try the file, then `<path>/index.html`, then fall back
+  to `app.html` (see `frontend/nginx.conf`; `vite dev` and `vite preview` do the same).
+- Build-time settings: `VITE_SITE_URL` (absolute public origin for canonical URLs and the sitemap)
+  and `VITE_DEMO_MODE=true` (shows the "public demo, self-host for real secrets" notices).
 
 ---
 
@@ -381,6 +398,8 @@ backend/
   tests/                    pytest against a real Postgres
   Dockerfile
 frontend/
+  src/site/                 public site: landing page, docs (Markdown in docs/content), privacy
+  scripts/prerender.mjs     pre-renders the public site to static HTML after the build
   src/vault/                browser cryptography, key session, protocol, pinning, .env parser (+ tests)
   src/components/vault/     vault dialogs, recovery key panel, .env editor, fingerprints, status
   src/components/ui/        shadcn components (CLI-generated, restyled via tokens)

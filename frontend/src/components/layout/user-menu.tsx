@@ -1,4 +1,4 @@
-import { LogOut, Monitor, Moon, Palette, ShieldCheck, Sun, UserRound } from "lucide-react"
+import { BookOpen, LogOut, Monitor, Moon, Palette, ShieldCheck, Sun, UserRound } from "lucide-react"
 import { Link } from "react-router"
 
 import { UserAvatar } from "@/components/user-avatar"
@@ -75,6 +75,11 @@ export function UserMenu() {
               </DropdownMenuRadioGroup>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
+          <DropdownMenuItem asChild>
+            <a href="/docs" target="_blank" rel="noopener">
+              <BookOpen /> Documentation
+            </a>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => signOut.mutate()}>

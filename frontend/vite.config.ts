@@ -7,7 +7,7 @@ import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
 
 // Where the FastAPI backend listens in development (see .env.example).
-const apiTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:8000'
+const apiTarget = process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:29100'
 
 /**
  * Content Security Policy for the built app (also set by deploy/nginx.conf).
@@ -87,7 +87,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5180,
+    port: 29180,
     strictPort: true,
     // The API is served from the same origin in every environment, so cookies stay
     // first-party and no CORS is needed. (No CSP in dev: Vite's HMR needs inline scripts.)
@@ -96,7 +96,7 @@ export default defineConfig({
     },
   },
   preview: {
-    port: 5180,
+    port: 29180,
     headers: SECURITY_HEADERS,
     proxy: {
       '/api': { target: apiTarget, xfwd: true },

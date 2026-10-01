@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://vault:vault@localhost:5433/vault_test")
+os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://vault:vault@localhost:29432/vault_test")
 os.environ["ENVIRONMENT"] = "test"
 os.environ["APP_URL"] = "http://testserver"
 os.environ["SIGNIN_IP_LIMIT"] = "100000"

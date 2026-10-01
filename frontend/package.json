@@ -9,7 +9,7 @@
     "typecheck": "tsc -b",
     "lint": "oxlint",
     "preview": "vite preview",
-    "gen:api": "../backend/.venv/bin/python -m vault_api.openapi_export > openapi.json && openapi-typescript openapi.json -o src/lib/api-schema.ts",
+    "gen:api": "uv run --project ../backend python -m vault_api.openapi_export > openapi.json && openapi-typescript openapi.json -o src/lib/api-schema.ts",
     "test": "vitest run"
   },
   "dependencies": {

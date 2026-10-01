@@ -11,31 +11,64 @@ A self-hosted, multi-workspace team vault. Teams keep two kinds of documents in 
 
 ## Quick start (local development)
 
-Requirements: Docker (with Compose), Python 3.12+ with [uv](https://docs.astral.sh/uv/), Node 20+.
+Install three things first (uv installs Python 3.12 for you if needed):
+
+- **Docker**: Docker Desktop on macOS and Windows, or Docker Engine on Linux. It must be running.
+- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, the Python package manager.
+- **Node.js 22 LTS** (20.19+ also works).
+
+Then use the script for your system.
+
+**Linux and macOS**
 
 ```bash
+git clone <repo-url> vault && cd vault
 ./scripts/dev.sh        # or: make dev
 ```
 
-This starts PostgreSQL and Mailpit in Docker, creates `backend/.env` with a random `SECRET_KEY` if it's
-missing, runs migrations, and starts the API and the web app:
+**Windows (PowerShell or Command Prompt, no WSL needed)**
+
+```bat
+git clone <repo-url> vault
+cd vault
+scripts\dev.cmd
+```
+
+**Windows with WSL**: open the WSL terminal, clone into your Linux home (`cd ~`), not into `/mnt/c`,
+and follow the Linux steps. Install uv and Node inside WSL, and turn on Docker Desktop →
+Settings → Resources → WSL Integration for your distro.
+
+The script checks the requirements and tells you what's missing. It then starts PostgreSQL and
+Mailpit in Docker, creates `backend/.env` with a random `SECRET_KEY` if it doesn't exist, installs
+packages, runs migrations, and starts the API and the web app. Ctrl+C stops both.
 
 | What | URL |
 |---|---|
-| Web app | http://localhost:5180 |
-| API docs (dev only) | http://localhost:8000/api/docs |
-| Mailpit (all outgoing email) | http://localhost:8025 |
+| Web app | http://localhost:29180 |
+| API docs (dev only) | http://localhost:29100/api/docs |
+| Mailpit (all outgoing email) | http://localhost:29825 |
 
 Sign up, open the verification email in Mailpit, name your workspace and set up your vault.
+
+**Ports.** Every port is in the uncommon 29xxx range, so the app doesn't clash with a local Postgres
+(5432), other dev servers (3000, 5173, 8000, 8080…) or the operating system's random port ranges.
+
+| Service | Port | Change it in |
+|---|---|---|
+| Web app (Vite) | 29180 | `frontend/vite.config.ts`, `APP_URL` in `backend/.env`, both dev scripts |
+| API (uvicorn) | 29100 | both dev scripts, `API_PROXY_TARGET` (frontend) |
+| PostgreSQL | 29432 | `docker-compose.yml`, `DATABASE_URL` in `backend/.env` |
+| Mailpit SMTP / web UI | 29025 / 29825 | `docker-compose.yml`, `SMTP_PORT` in `backend/.env` |
+| Production web (nginx) | 29080 | `WEB_PORT` in `.env.prod` |
 
 To run the parts by hand:
 
 ```bash
-docker compose up -d                           # Postgres :5433 (+ vault_test DB), Mailpit :1025/:8025
+docker compose up -d                           # Postgres :29432 (+ vault_test DB), Mailpit :29025/:29825
 cd backend && cp .env.example .env && uv sync
 uv run alembic upgrade head
-uv run uvicorn vault_api.main:app --reload --port 8000 --proxy-headers
-cd ../frontend && npm install && npm run dev   # http://localhost:5180
+uv run uvicorn vault_api.main:app --reload --port 29100 --proxy-headers
+cd ../frontend && npm install && npm run dev   # http://localhost:29180
 ```
 
 `npm run build && npm run preview` serves the production build with the production Content Security
@@ -75,7 +108,8 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 
 This runs three containers. The `api` container applies migrations and serves uvicorn. The `web`
 container is nginx serving the built SPA with a strict CSP and security headers, and proxying `/api`.
-Postgres is the third. Put TLS in front of port 8080 (a load balancer or Caddy/Traefik) and keep
+Postgres is the third. The web container listens on port 29080 (set `WEB_PORT` in `.env.prod` to
+change it). Put TLS in front of it (a load balancer or Caddy/Traefik) and keep
 `COOKIE_SECURE=true`.
 
 Every setting is documented in [backend/.env.example](backend/.env.example) and

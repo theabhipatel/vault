@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: vault
       POSTGRES_DB: vault
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:29432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -23,8 +23,8 @@ services:
     image: axllent/mailpit:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:1025:1025"   # SMTP
-      - "127.0.0.1:8025:8025"   # Web UI
+      - "127.0.0.1:29025:1025"   # SMTP
+      - "127.0.0.1:29825:8025"   # Web UI
     environment:
       MP_SMTP_AUTH_ACCEPT_ANY: "1"
       MP_SMTP_AUTH_ALLOW_INSECURE: "1"

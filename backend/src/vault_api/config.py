@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
 
     # Public origin of the web app. Used for email links, the Origin check and CORS.
-    app_url: str = "http://localhost:5180"
+    app_url: str = "http://localhost:29180"
     app_name: str = "Vault"
 
-    database_url: str = "postgresql+asyncpg://vault:vault@localhost:5433/vault"
+    database_url: str = "postgresql+asyncpg://vault:vault@localhost:29432/vault"
     database_echo: bool = False
 
     # Used to sign short-lived OAuth state cookies. Must be long and random in production.
@@ -27,9 +27,9 @@ class Settings(BaseSettings):
     session_ttl_days: int = 30
     session_idle_days: int = 7
 
-    # Email (SMTP). In development Mailpit catches everything on port 1025.
+    # Email (SMTP). In development Mailpit catches everything on port 29025.
     smtp_host: str = "localhost"
-    smtp_port: int = 1025
+    smtp_port: int = 29025
     smtp_username: str | None = None
     smtp_password: SecretStr | None = None
     smtp_starttls: bool = False

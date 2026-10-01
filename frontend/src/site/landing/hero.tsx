@@ -127,11 +127,19 @@ export function Hero() {
             data-reveal
             className="bg-card/80 hover:border-brand/40 inline-flex items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-xs font-medium shadow-xs transition-colors"
           >
-            <span className="bg-brand text-brand-foreground inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold">
+            <span className="bg-brand text-brand-foreground inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap">
               <Sparkles className="size-3" /> {DEMO_MODE ? "Live demo" : "Open source"}
             </span>
-            {DEMO_MODE ? "Try it free here, self-host it for real secrets" : "Self-hosted · end-to-end encrypted · free"}
-            <ArrowRight className="size-3" />
+            {DEMO_MODE ? (
+              <>
+                {/* Shorter on phones so the pill stays on one line. */}
+                <span className="sm:hidden">Self-host it for real secrets</span>
+                <span className="hidden sm:inline">Try it free here, self-host it for real secrets</span>
+              </>
+            ) : (
+              "Self-hosted · end-to-end encrypted · free"
+            )}
+            <ArrowRight className="size-3 shrink-0" />
           </a>
           <h1 data-reveal style={{ "--d": 1 } as React.CSSProperties} className="mt-6 text-[2.6rem] leading-[1.04] font-semibold sm:text-6xl lg:text-7xl">
             Your team's secrets, <span className="text-gradient-brand">sealed before</span> they leave the browser.

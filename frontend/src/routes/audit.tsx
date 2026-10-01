@@ -190,12 +190,12 @@ export function AuditPage() {
                       {r.details?.source === "browser" ? <MonitorSmartphone className="text-muted-foreground size-3.5" aria-label="Reported by the browser" /> : null}
                     </button>
                   </TableCell>
-                  <TableCell className="max-w-56 truncate text-sm">{r.target_label ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground hidden max-w-40 truncate text-xs lg:table-cell">{r.project_name ?? "—"}</TableCell>
+                  <TableCell className="max-w-56 truncate text-sm">{r.target_label ?? "-"}</TableCell>
+                  <TableCell className="text-muted-foreground hidden max-w-40 truncate text-xs lg:table-cell">{r.project_name ?? "-"}</TableCell>
                   <TableCell className="hidden md:table-cell">
                     <Tooltip>
                       <TooltipTrigger className="text-muted-foreground text-left text-xs">
-                        <span className="block font-mono">{r.ip ?? "—"}</span>
+                        <span className="block font-mono">{r.ip ?? "-"}</span>
                         <span className="block">{describeUserAgent(r.user_agent)}</span>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-sm break-words">{r.user_agent ?? "No user agent"}</TooltipContent>

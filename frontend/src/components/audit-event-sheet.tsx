@@ -73,7 +73,7 @@ export function AuditEventSheet({ event, onOpenChange }: { event: AuditEvent | n
                   {event.actor_email ? <span className="text-muted-foreground block text-xs">{event.actor_email}</span> : null}
                 </Row>
                 <Row label="Target">
-                  {event.target_label ?? "—"}
+                  {event.target_label ?? "-"}
                   {event.target_type ? (
                     <span className="text-muted-foreground block text-xs">
                       {event.target_type}
@@ -86,9 +86,9 @@ export function AuditEventSheet({ event, onOpenChange }: { event: AuditEvent | n
                     </span>
                   ) : null}
                 </Row>
-                <Row label="Project">{event.project_name ?? "—"}</Row>
+                <Row label="Project">{event.project_name ?? "-"}</Row>
                 <Row label="IP address">
-                  <Mono>{event.ip ?? "—"}</Mono>
+                  <Mono>{event.ip ?? "-"}</Mono>
                 </Row>
                 <Row label="Device">
                   {describeUserAgent(event.user_agent)}

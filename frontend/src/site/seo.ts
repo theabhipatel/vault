@@ -15,11 +15,11 @@ const HOME_DESCRIPTION =
 export function pageMeta(pathname: string): PageMeta {
   const path = pathname.replace(/\/+$/, "") || "/"
   if (path === "/") {
-    return { title: `${SITE_NAME} — End-to-end encrypted secrets and docs for teams`, description: HOME_DESCRIPTION, path, type: "website" }
+    return { title: `${SITE_NAME} | End-to-end encrypted secrets and docs for teams`, description: HOME_DESCRIPTION, path, type: "website" }
   }
   if (path === "/docs") {
     return {
-      title: `Documentation — ${SITE_NAME}`,
+      title: `Documentation | ${SITE_NAME}`,
       description: "Learn how to self-host Secure Vault, manage workspaces and roles, and keep secrets end-to-end encrypted.",
       path,
       type: "website",
@@ -27,17 +27,17 @@ export function pageMeta(pathname: string): PageMeta {
   }
   if (path.startsWith("/docs/")) {
     const doc = findDoc(path.slice("/docs/".length))
-    if (doc) return { title: `${doc.title} — ${SITE_NAME} docs`, description: doc.description, path, type: "article" }
+    if (doc) return { title: `${doc.title} | ${SITE_NAME} docs`, description: doc.description, path, type: "article" }
   }
   if (path === "/privacy") {
     return {
-      title: `Privacy and demo terms — ${SITE_NAME}`,
+      title: `Privacy and demo terms | ${SITE_NAME}`,
       description: "What the public Secure Vault demo stores, how long, and why real secrets belong on your own server.",
       path,
       type: "website",
     }
   }
-  return { title: `Page not found — ${SITE_NAME}`, description: HOME_DESCRIPTION, path, type: "website" }
+  return { title: `Page not found | ${SITE_NAME}`, description: HOME_DESCRIPTION, path, type: "website" }
 }
 
 /** Every page that is pre-rendered to static HTML at build time. */

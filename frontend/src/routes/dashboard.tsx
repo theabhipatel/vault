@@ -164,9 +164,9 @@ export function DashboardPage() {
       </div>
 
       <div className="mb-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Stat icon={FolderKanban} label="Active projects" value={projects.isPending ? "–" : active.length} to={`${base}/projects`} />
-        <Stat icon={FileText} label="Documents you can see" value={projects.isPending ? "–" : docCount} />
-        <Stat icon={Users} label="Members" value={summary?.member_count ?? "–"} to={`${base}/members`} />
+        <Stat icon={FolderKanban} label="Active projects" value={projects.isPending ? "-" : active.length} to={`${base}/projects`} />
+        <Stat icon={FileText} label="Documents you can see" value={projects.isPending ? "-" : docCount} />
+        <Stat icon={Users} label="Members" value={summary?.member_count ?? "-"} to={`${base}/members`} />
       </div>
 
       <section className="mb-10">

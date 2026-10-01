@@ -174,7 +174,7 @@ export function detailLabel(key: string): string {
 }
 
 export function detailValue(value: unknown): string {
-  if (value === null || value === undefined) return "—"
+  if (value === null || value === undefined) return "-"
   if (Array.isArray(value)) return value.map(detailValue).join(", ")
   if (typeof value === "object") return JSON.stringify(value)
   const text = String(value)

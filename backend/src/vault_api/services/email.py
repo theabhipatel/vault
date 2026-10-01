@@ -44,7 +44,7 @@ def _render(
         text_parts += ["", f"{action[0]}: {action[1]}"]
     if footer:
         text_parts += ["", footer]
-    text_parts += ["", f"— {settings.app_name}"]
+    text_parts += ["", settings.app_name]
 
     esc = html.escape
     button = ""

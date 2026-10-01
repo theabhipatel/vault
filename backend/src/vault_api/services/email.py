@@ -56,8 +56,10 @@ def _render(
         'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1c1f1e">'
         '<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;'
         'padding:32px;border:1px solid #e5e7e6">'
-        f'<div style="font-weight:700;font-size:15px;color:#0f766e;margin-bottom:20px">'
-        f"&#128274; {esc(settings.app_name)}</div>"
+        '<div style="font-weight:700;font-size:15px;color:#0f766e;margin-bottom:20px">'
+        f'<img src="{esc(settings.app_url.rstrip("/"))}/logo-email.png" width="28" height="28" '
+        'alt="" style="vertical-align:middle;border-radius:7px;margin-right:8px">'
+        f"{esc(settings.app_name)}</div>"
         f'<h1 style="font-size:20px;margin:0 0 16px">{esc(title)}</h1>{body}{button}{foot}'
         "</div></body></html>"
     )

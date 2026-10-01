@@ -1,182 +1,352 @@
-# Vault
+<div align="center">
 
-A self-hosted, multi-workspace team vault. Teams keep two kinds of documents in projects:
+<img src="frontend/public/logo.svg" width="72" height="72" alt="Secure Vault logo" />
 
-- **Normal documents**: plain text or Markdown, protected by access control. The server can read them.
-- **Secure documents**: text, Markdown or `.env` files, **end-to-end encrypted in the browser**. The
-  server only ever stores ciphertext, sealed keys and public keys. It never sees a vault password,
-  a private key, a project key or a plaintext secret.
+# Secure Vault
+
+**Your team's docs and secrets in one place, with secrets end-to-end encrypted in the browser.**
+
+Self-hosted · Multi-workspace · Roles and permissions · Audit log · Free
+
+[Live demo](https://secure-vault-navy-delta.vercel.app) · [Documentation](https://secure-vault-navy-delta.vercel.app/docs) · [Self-hosting guide](https://secure-vault-navy-delta.vercel.app/docs/self-hosting)
+
+</div>
 
 ---
 
-## Quick start (local development)
+## What is Secure Vault?
 
-Install three things first (uv installs Python 3.12 for you if needed):
+Secure Vault is a team vault you run on your own server. A team works in **workspaces**, organises
+work into **projects**, and keeps two kinds of documents in each project:
 
-- **Docker**: Docker Desktop on macOS and Windows, or Docker Engine on Linux. It must be running.
-- **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, the Python package manager.
-- **Node.js 22 LTS** (20.19+ also works).
+| | Normal documents | Secure documents |
+|---|---|---|
+| Formats | Plain text, Markdown | Plain text, Markdown, `.env` files |
+| Protection | Access control (roles and permissions) | **End-to-end encryption** in the browser |
+| Can the server read them? | Yes | **No.** It only stores ciphertext |
+| Good for | Notes, runbooks, onboarding docs | API keys, passwords, `.env` files, credentials |
 
-Then use the script for your system.
+Secure documents are encrypted and decrypted only in your browser, with keys unlocked by your
+**vault password**. The server never sees that password, your private key, any project key or any
+plaintext secret. Even someone who steals the whole database gets nothing readable.
+
+### Features
+
+- **Workspaces and teams:** invite people by email, with Owner, Admin, Manager, Member and custom roles.
+- **Fine-grained permissions:** choose who can see which projects, who can edit, and who can open secure documents.
+- **End-to-end encrypted `.env` editor:** a table editor with reveal, copy (auto-cleared clipboard) and download.
+- **Version history** for every document, with restore.
+- **Automatic key sharing:** new teammates get access without any manual key exchange.
+- **Key rotation when someone loses access:** removed people can't read anything new.
+- **Recovery key** for a forgotten vault password.
+- **Append-only audit log:** every sign-in, view, edit, download, wrong vault password and access change, with IP and device.
+- **Notifications and security emails**, for example after repeated wrong vault passwords.
+- **Sign in with email and password, or Google** (optional).
+- **Light and dark themes, and a responsive layout** that works on phones.
+
+---
+
+## Try the demo
+
+Open the **[live demo](https://secure-vault-navy-delta.vercel.app)**, create an account and look around.
+
+> **The demo is for trying things out only.** Anyone can sign up, data may be wiped at any time, and
+> you don't control the server. **Never store real secrets there.** For real use, self-host it
+> (below).
+
+---
+
+## Run it on your computer
+
+You need three things. uv installs Python 3.12 for you if needed.
+
+1. **[Docker](https://docs.docker.com/get-docker/):** Docker Desktop on macOS and Windows, or Docker Engine on Linux. It must be running.
+2. **[uv](https://docs.astral.sh/uv/getting-started/installation/)**, the Python package manager.
+3. **[Node.js](https://nodejs.org/) 22 LTS** (20.19 or newer also works).
+
+Then run the start script for your system:
 
 **Linux and macOS**
 
 ```bash
-git clone <repo-url> vault && cd vault
-./scripts/dev.sh        # or: make dev
+git clone https://github.com/theabhipatel/vault.git
+cd vault
+./scripts/dev.sh
 ```
 
-**Windows (PowerShell or Command Prompt, no WSL needed)**
+**Windows** (PowerShell or Command Prompt, no WSL needed)
 
 ```bat
-git clone <repo-url> vault
+git clone https://github.com/theabhipatel/vault.git
 cd vault
 scripts\dev.cmd
 ```
 
-**Windows with WSL**: open the WSL terminal, clone into your Linux home (`cd ~`), not into `/mnt/c`,
-and follow the Linux steps. Install uv and Node inside WSL, and turn on Docker Desktop →
-Settings → Resources → WSL Integration for your distro.
+**Windows with WSL:** clone inside your Linux home (`cd ~`), not under `/mnt/c`, and use the Linux
+steps. Install uv and Node inside WSL, and turn on Docker Desktop → Settings → Resources → WSL
+Integration for your distro.
 
-The script checks the requirements and tells you what's missing. It then starts PostgreSQL and
-Mailpit in Docker, creates `backend/.env` with a random `SECRET_KEY` if it doesn't exist, installs
-packages, runs migrations, and starts the API and the web app. Ctrl+C stops both.
+The script:
+1. checks that everything is installed and tells you what's missing;
+2. starts PostgreSQL and a mail catcher (Mailpit) in Docker;
+3. creates `backend/.env` with a random secret key;
+4. installs the packages and sets up the database;
+5. starts the API and the web app.
 
-| What | URL |
+Press **Ctrl+C** to stop everything.
+
+Then open these addresses:
+
+| What | Address |
 |---|---|
-| Website (landing page) | http://localhost:29180 |
+| Website | http://localhost:29180 |
+| The app | http://localhost:29180/app |
 | Documentation | http://localhost:29180/docs |
-| Web app | http://localhost:29180/app (sign-up at `/signup`) |
-| API docs (dev only) | http://localhost:29100/api/docs |
-| Mailpit (all outgoing email) | http://localhost:29825 |
+| Emails the app sends (Mailpit) | http://localhost:29825 |
+| API reference (development only) | http://localhost:29100/api/docs |
 
-Sign up, open the verification email in Mailpit, name your workspace and set up your vault.
+**First steps:**
+1. Sign up.
+2. Open the verification email in Mailpit and click the link.
+3. Name your workspace.
+4. Set up your vault.
+5. Create a secure `.env` document.
 
-**Ports.** Every port is in the uncommon 29xxx range, so the app doesn't clash with a local Postgres
-(5432), other dev servers (3000, 5173, 8000, 8080…) or the operating system's random port ranges.
+<details>
+<summary><b>Ports used, and how to change them</b></summary>
+
+Every port is in the uncommon 29xxx range, so Secure Vault doesn't clash with a local PostgreSQL
+(5432) or other dev servers (3000, 5173, 8000, 8080 and so on).
 
 | Service | Port | Change it in |
 |---|---|---|
-| Web app (Vite) | 29180 | `frontend/vite.config.ts`, `APP_URL` in `backend/.env`, both dev scripts |
-| API (uvicorn) | 29100 | both dev scripts, `API_PROXY_TARGET` (frontend) |
+| Web app (Vite) | 29180 | `frontend/vite.config.ts`, `APP_URL` in `backend/.env`, the dev scripts |
+| API (uvicorn) | 29100 | the dev scripts, `API_PROXY_TARGET` (frontend) |
 | PostgreSQL | 29432 | `docker-compose.yml`, `DATABASE_URL` in `backend/.env` |
-| Mailpit SMTP / web UI | 29025 / 29825 | `docker-compose.yml`, `SMTP_PORT` in `backend/.env` |
+| Mailpit SMTP / web inbox | 29025 / 29825 | `docker-compose.yml`, `SMTP_PORT` in `backend/.env` |
 | Production web (nginx) | 29080 | `WEB_PORT` in `.env.prod` |
 
-To run the parts by hand:
+</details>
+
+<details>
+<summary><b>Run each part by hand instead of the script</b></summary>
 
 ```bash
-docker compose up -d                           # Postgres :29432 (+ vault_test DB), Mailpit :29025/:29825
+docker compose up -d                           # PostgreSQL :29432 and Mailpit :29025/:29825
 cd backend && cp .env.example .env && uv sync
 uv run alembic upgrade head
 uv run uvicorn vault_api.main:app --reload --port 29100 --proxy-headers
 cd ../frontend && npm install && npm run dev   # http://localhost:29180
 ```
 
-`npm run build && npm run preview` serves the production build with the production Content Security
-Policy. The dev server can't enforce it, because Vite's hot reload needs inline scripts.
+`npm run build && npm run preview` serves the production build with the production Content
+Security Policy. The dev server can't enforce it, because hot reload needs inline scripts.
+
+</details>
+
+---
+
+## Deploy it for real use (Docker)
+
+This is the recommended way to run Secure Vault for your team. All you need on the server is Docker.
+
+```bash
+git clone https://github.com/theabhipatel/vault.git && cd vault
+cp backend/.env.example .env.prod
+```
+
+Edit `.env.prod`. At minimum, set:
+
+```env
+APP_URL=https://vault.example.com          # your address, exactly as in the browser
+SECRET_KEY=a-long-random-string            # python3 -c "import secrets;print(secrets.token_urlsafe(48))"
+COOKIE_SECURE=true
+POSTGRES_PASSWORD=a-long-random-password   # letters and digits only
+SMTP_HOST=smtp.example.com                 # plus SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_STARTTLS, MAIL_FROM
+```
+
+Start it:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
+
+This runs three containers:
+- **`postgres`**, the database;
+- **`api`**, which updates the database on every start;
+- **`web`**, nginx with strict security headers, on port **29080**.
+
+Put HTTPS in front of port 29080, for example with Caddy, Traefik or your load balancer.
+
+The full guide, covering HTTPS, backups and updates, is the [production deployment docs](https://secure-vault-navy-delta.vercel.app/docs/production).
+Every setting is listed in [backend/.env.example](backend/.env.example) and in the
+[configuration reference](https://secure-vault-navy-delta.vercel.app/docs/configuration).
+
+---
+
+## Deploy a free public demo (Vercel + Neon)
+
+The same code can run as a free public demo on **Vercel**, with a free **Neon** PostgreSQL database.
+This is only for letting people try the app. Use Docker for real secrets.
+
+Only three files at the repository root are Vercel-specific, and Docker and the dev scripts ignore them:
+- `vercel.json`: build, routing, security headers and a daily cleanup job;
+- `api/index.py`: runs the API as a Vercel function. Its comments explain the whole setup;
+- `requirements.txt`: Python packages, generated from `backend/uv.lock` by `make vercel-requirements`.
+
+**Steps**
+
+1. In **Neon**, create a project in region **AWS US East 1** and copy two connection strings: the **pooled** one and the **direct** one.
+2. Create the tables once, from your computer:
+   ```bash
+   cd backend
+   DATABASE_URL='<direct connection string>' uv run alembic upgrade head
+   ```
+3. In **Vercel**, click **Add New → Project** and import this GitHub repository. Keep the root directory as it is.
+4. Under **Settings → Environment Variables**, add:
+   ```env
+   SERVERLESS=true
+   ENVIRONMENT=production
+   COOKIE_SECURE=true
+   CLIENT_IP_HEADER=x-real-ip
+   APP_URL=https://<your-project>.vercel.app
+   SECRET_KEY=<long random string>
+   CRON_SECRET=<another long random string>
+   DATABASE_URL=<Neon pooled connection string>
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_STARTTLS=true
+   SMTP_USERNAME=<you@gmail.com>
+   SMTP_PASSWORD=<Gmail app password>
+   MAIL_FROM=Secure Vault Demo <you@gmail.com>
+   VITE_DEMO_MODE=true
+   VITE_SITE_URL=https://<your-project>.vercel.app
+   ```
+5. **Deploy.** Open `/api/health`; it should show `{"status":"ok"}`.
+
+After that, every push deploys automatically. When a release adds database migrations, run step 2 again first.
+
+**What `SERVERLESS=true` changes:**
+- emails are sent straight away instead of by a background worker;
+- database connections aren't kept open between requests;
+- a daily Vercel Cron call retries failed emails and cleans up.
+
+All of these settings are **off by default**, so self-hosted installs behave exactly as before.
+
+**Free-plan limits:**
+- requests are capped at 4.5 MB;
+- the database sleeps when idle, so the first request after a pause is slower;
+- the cleanup runs once a day.
+
+The full guide is the [Deploy a demo on Vercel docs](https://secure-vault-navy-delta.vercel.app/docs/vercel-demo).
+
+---
+
+## For developers
 
 ### Tests and checks
 
 ```bash
-make test                   # backend: pytest against a real Postgres
-cd frontend && npm test     # frontend: vitest, the crypto flows with the real libsodium + WebCrypto
-make check                  # ruff + mypy --strict, tsc (strict) + oxlint, production build
+make test                   # backend tests (pytest against a real PostgreSQL; run `docker compose up -d` first)
+cd frontend && npm test     # frontend tests, including the encryption flows with real libsodium + WebCrypto
+make check                  # lint + strict type checks for backend and frontend, and a production build
 make gen-api                # regenerate the typed API client from the backend's OpenAPI schema
+make vercel-requirements    # regenerate requirements.txt after changing backend packages
 ```
 
-What the tests cover:
+<details>
+<summary><b>What the tests cover</b></summary>
 
 | Area | Where |
 |---|---|
 | Vault setup, unlock, wrong password, private key bound to its owner | `frontend/src/vault/crypto.test.ts` |
 | Recovery key, password change (same keypair), recovery flow, old recovery key revoked | same |
-| Cross-user sharing: Alice encrypts, Bob's separately unlocked vault decrypts | same |
+| Sharing: Alice encrypts, Bob's separately unlocked vault decrypts | same |
 | Sealed keys only open for their recipient, project and key version | same |
-| Ciphertext swap and replay between documents, versions, key versions and projects fails | same |
+| Swapping or replaying ciphertext between documents, versions, key versions and projects fails | same |
 | Rotation: every version re-encrypted; the removed user's old key opens nothing new | same |
 | Vault reset: keys sealed to the old keypair become useless | same |
-| `.env` parsing and serialisation | `frontend/src/vault/env.test.ts` |
-| Server vault rules: key init, grant validation, pending access, revocation, atomic rotation, reset, secure-doc access | `backend/tests/test_vault.py` |
-| Permission and hierarchy rules (pure, and enforced over HTTP) | `backend/tests/test_permission_rules.py`, `test_workspaces.py` |
-| Auth: verification, lockout, CSRF, generic errors, pre-account-takeover, sessions | `backend/tests/test_auth.py` |
+| `.env` parsing and writing | `frontend/src/vault/env.test.ts` |
+| Server vault rules: key setup, grants, pending access, revocation, atomic rotation, reset, secure-document access, audit events | `backend/tests/test_vault.py` |
+| Permission and rank rules (pure, and enforced over HTTP) | `backend/tests/test_permission_rules.py`, `test_workspaces.py` |
+| Sign-in: verification, lockout, CSRF, generic errors, account-takeover protection, sessions | `backend/tests/test_auth.py` |
+| Hosting modes: self-hosted defaults unchanged; serverless email, cron, client IP, Neon URLs | `backend/tests/test_deployment.py` |
 
-### Production deployment
+</details>
 
-```bash
-cp backend/.env.example .env.prod    # set APP_URL, SECRET_KEY, SMTP_*, COOKIE_SECURE=true, POSTGRES_PASSWORD
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
-```
-
-This runs three containers. The `api` container applies migrations and serves uvicorn. The `web`
-container is nginx serving the built SPA with a strict CSP and security headers, and proxying `/api`.
-Postgres is the third. The web container listens on port 29080 (set `WEB_PORT` in `.env.prod` to
-change it). Put TLS in front of it (a load balancer or Caddy/Traefik) and keep
-`COOKIE_SECURE=true`.
-
-Every setting is documented in [backend/.env.example](backend/.env.example) and
-[frontend/.env.example](frontend/.env.example). Google sign-in is optional: set `GOOGLE_CLIENT_ID` and
-`GOOGLE_CLIENT_SECRET` and register `<APP_URL>/api/auth/google/callback` as the redirect URI.
-
----
-
-## Architecture
+### How it's built
 
 ```
-browser ──► /, /docs/*, /privacy   public site: pre-rendered static HTML (SEO), hydrated by a small bundle
-        ├─► /app, /login, /w/* …   React SPA (every script and style carries an SRI hash)
+browser ──► /, /docs/*, /privacy   public site: pre-rendered static HTML (good for SEO)
+        ├─► /app, /login, /w/* …   the React app (every script and style has an integrity hash)
         │                          └─ vault: libsodium (Argon2id, X25519 sealed boxes) + WebCrypto (AES-256-GCM)
         └─► /api/*                 FastAPI ──► PostgreSQL
-                                        └─► email outbox ──► SMTP (Mailpit in dev)
+                                        └─► email outbox ──► SMTP (Mailpit in development)
 ```
 
-The SPA and the API are always served from **one origin**. Cookies stay first-party and CORS stays
-closed.
+The website, the app and the API are always served from **one address**, so cookies stay
+first-party and cross-origin requests are blocked.
 
-**Backend** (`backend/src/vault_api`): FastAPI, fully typed (`mypy --strict`), SQLAlchemy 2 (async)
-with Alembic.
-- `permissions.py` holds the permission catalogue, default roles and the hierarchy rules, as pure,
-  unit-tested functions.
-- `services/access.py` computes project visibility and who has secure access to which project. Any
-  change that can alter secure access (role, permissions, project assignment, membership) takes a
-  snapshot before and diffs after, then calls the vault's grant and revocation hooks.
-- `services/vault.py` and `routers/vault.py` hold the server side of the vault: entitlement, grant
-  validation, revocation, rotation bookkeeping and secure-document storage.
-- Emails go through a transactional outbox with a retrying worker. Rate limits live in Postgres.
+- **Backend** (`backend/src/vault_api`):
+  - Python 3.12 and FastAPI, fully typed (`mypy --strict`);
+  - SQLAlchemy 2 (async) with Alembic migrations;
+  - rate limits and the email outbox live in PostgreSQL.
+- **Frontend** (`frontend/src`):
+  - React 19, strict TypeScript and Vite;
+  - Tailwind CSS v4 and shadcn/ui, styled through the theme tokens in `src/index.css`;
+  - a typed API client generated from the backend's OpenAPI schema.
+- **Encryption** (`frontend/src/vault`):
+  - `crypto.ts` holds all cryptography;
+  - `kdf.worker.ts` runs Argon2id in a Web Worker;
+  - `session.ts` keeps keys in memory only;
+  - `protocol.ts` covers sharing and rotation;
+  - `trust.ts` pins teammates' public keys.
+- **Public site** (`frontend/src/site`):
+  - the landing page, the docs (Markdown files in `docs/content/`, listed in `docs/catalog.ts`) and the privacy page;
+  - `npm run build` pre-renders every page to static HTML with titles, meta tags, Open Graph and structured data, plus `robots.txt` and `sitemap.xml`;
+  - the app is never loaded on these pages.
 
-**Frontend** (`frontend/src`): React 19, strict TypeScript, Vite, Tailwind v4, shadcn/ui restyled
-entirely through theme tokens (`src/index.css`).
-- `src/vault/crypto.ts` holds all cryptography. `kdf.worker.ts` runs Argon2id in a Web Worker.
-  `session.ts` keeps keys in memory. `protocol.ts` covers key creation, encrypt and decrypt, grants
-  and rotation. `trust.ts` pins public keys (trust on first use).
-- A typed API client is generated from the backend's OpenAPI schema.
+Build-time settings for the site:
+- `VITE_SITE_URL`: your public address, used for canonical URLs and the sitemap;
+- `VITE_DEMO_MODE=true`: shows the "public demo" notices.
 
-**Public site** (`frontend/src/site`): the landing page, the documentation and the privacy page.
-- A separate entry (`site.html`, `src/site/entry-client.tsx`) with its own small, code-split bundle;
-  the app is never loaded on public pages.
-- `npm run build` pre-renders every public page to static HTML (`scripts/prerender.mjs`, using
-  React Router's static handler) with per-page titles, meta, Open Graph tags and JSON-LD, then
-  writes `robots.txt` and, when `VITE_SITE_URL` is set, `sitemap.xml`. The browser hydrates the
-  same markup; loader data travels in a JSON data block, so the strict CSP still applies.
-- Docs are Markdown files in `src/site/docs/content/`, listed in `src/site/docs/catalog.ts`.
-- Build output: `dist/index.html` (landing), `dist/docs/<page>/index.html`, `dist/privacy/index.html`
-  and `dist/app.html` (the app shell). Servers try the file, then `<path>/index.html`, then fall back
-  to `app.html` (see `frontend/nginx.conf`; `vite dev` and `vite preview` do the same).
-- Build-time settings: `VITE_SITE_URL` (absolute public origin for canonical URLs and the sitemap)
-  and `VITE_DEMO_MODE=true` (shows the "public demo, self-host for real secrets" notices).
+### Project layout
 
-### Public demo on Vercel (optional)
-
-The same code can run as a free public demo on Vercel + Neon. Only three root files are
-Vercel-specific, and self-hosted installs ignore them: `vercel.json`, `api/index.py` (the API
-function, with comments explaining the whole setup) and `requirements.txt` (generated from
-`backend/uv.lock` by `make vercel-requirements`). The API adapts through opt-in settings,
-`SERVERLESS`, `CRON_SECRET` and `CLIENT_IP_HEADER`, that are off by default. Step-by-step guide:
-`/docs/vercel-demo` (`frontend/src/site/docs/content/vercel-demo.md`).
+```
+backend/
+  src/vault_api/            FastAPI app: routers, services (access, vault, email, audit), models
+  migrations/               Alembic migrations (including the append-only audit trigger)
+  tests/                    pytest against a real PostgreSQL
+frontend/
+  src/routes/               app pages
+  src/components/           UI, including vault dialogs and the .env editor (src/components/vault)
+  src/vault/                browser cryptography, key session, sharing protocol, key pinning (+ tests)
+  src/site/                 public site: landing page, docs (Markdown in docs/content), privacy page
+  scripts/prerender.mjs     turns the public site into static HTML after the build
+  nginx.conf, Dockerfile    production web image with strict security headers
+scripts/                    start scripts: dev.sh (Linux/macOS/WSL), dev.cmd + dev.ps1 (Windows)
+docker-compose.yml          PostgreSQL + Mailpit for development
+docker-compose.prod.yml     PostgreSQL + API + web for production
+vercel.json, api/, requirements.txt   Vercel demo only (ignored by Docker)
+```
 
 ---
 
-## Security model
+## Security
+
+**In short:**
+- Secure documents are encrypted in your browser before they're sent, with AES-256-GCM.
+- Each project has its own key, shared with each teammate by sealing it to their public key (X25519).
+- Your private key is protected by your vault password (Argon2id).
+- The server stores only encrypted data and public keys, so a full database leak reveals no secrets.
+- Normal documents aren't end-to-end encrypted. The app says so on every one.
+
+Read the **limitations** in the details below before you rely on it. The most important one: someone
+who takes over your **live** server could change the app's JavaScript to capture a vault password at
+the next unlock. This is true of every browser-based end-to-end encrypted app.
+
+<details>
+<summary><b>Full security model: threat model, algorithms, key hierarchy, lifecycle, limitations</b></summary>
 
 ### Goal and threat model
 
@@ -365,7 +535,7 @@ measures counter that:
 5. **CSP allows inline styles** (`style-src 'unsafe-inline'`) because the UI library injects small
    `<style>` elements. Scripts remain strictly controlled.
 6. **Rotation is one request.** Very large projects (hundreds of MB of secure history) are limited by
-   the 256 MB request cap on the rotation endpoint.
+   the 256 MB request cap on the rotation endpoint (4.5 MB on the Vercel demo).
 7. **Clipboard clearing is best effort.** Copied secrets are cleared after 30 s only where the browser
    allows clipboard access.
 8. **Browser-reported audit events are best effort.** Wrong vault passwords, unlocks and
@@ -374,9 +544,10 @@ measures counter that:
    reporting anything. The real protection against guessing is Argon2id with a strong vault
    password. These reports catch everyday misuse and mistakes through the normal app.
 
----
+</details>
 
-## Permissions model
+<details>
+<summary><b>Permissions model</b></summary>
 
 Roles are ranked: **Owner > Admin > Manager > Member**, plus custom roles placed anywhere below your
 own. The server enforces these rules on every request:
@@ -393,25 +564,14 @@ own. The server enforces these rules on every request:
 - **Secure access:** secure access to a project means the role has "view secure documents" and the
   user can see the project. Losing it triggers the revocation flow above.
 
+</details>
+
 ---
 
-## Repository layout
+<div align="center">
 
-```
-docker-compose.yml          Postgres + Mailpit for development
-docker-compose.prod.yml     Postgres + API + nginx web (production-style)
-scripts/dev.sh              one-command local run
-backend/
-  src/vault_api/            FastAPI app: routers, services (access, vault, email, audit), models
-  migrations/               Alembic migrations (incl. the append-only audit trigger)
-  tests/                    pytest against a real Postgres
-  Dockerfile
-frontend/
-  src/site/                 public site: landing page, docs (Markdown in docs/content), privacy
-  scripts/prerender.mjs     pre-renders the public site to static HTML after the build
-  src/vault/                browser cryptography, key session, protocol, pinning, .env parser (+ tests)
-  src/components/vault/     vault dialogs, recovery key panel, .env editor, fingerprints, status
-  src/components/ui/        shadcn components (CLI-generated, restyled via tokens)
-  src/routes/               pages
-  Dockerfile, nginx.conf    production image with CSP
-```
+Developed by **[TheAbhiPatel](https://www.theabhipatel.com/)** · [GitHub](https://github.com/theabhipatel)
+
+If Secure Vault is useful to you, please **[give it a star on GitHub](https://github.com/theabhipatel/vault)**.
+
+</div>

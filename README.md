@@ -165,6 +165,15 @@ entirely through theme tokens (`src/index.css`).
 - Build-time settings: `VITE_SITE_URL` (absolute public origin for canonical URLs and the sitemap)
   and `VITE_DEMO_MODE=true` (shows the "public demo, self-host for real secrets" notices).
 
+### Public demo on Vercel (optional)
+
+The same code can run as a free public demo on Vercel + Neon. Only three root files are
+Vercel-specific, and self-hosted installs ignore them: `vercel.json`, `api/index.py` (the API
+function, with comments explaining the whole setup) and `requirements.txt` (generated from
+`backend/uv.lock` by `make vercel-requirements`). The API adapts through opt-in settings,
+`SERVERLESS`, `CRON_SECRET` and `CLIENT_IP_HEADER`, that are off by default. Step-by-step guide:
+`/docs/vercel-demo` (`frontend/src/site/docs/content/vercel-demo.md`).
+
 ---
 
 ## Security model

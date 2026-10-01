@@ -53,6 +53,11 @@ export const DOC_SECTIONS: DocSection[] = [
       description: "Deploy with Docker Compose behind TLS, keep it updated and back it up.",
     },
     {
+      slug: "vercel-demo",
+      title: "Deploy a demo on Vercel",
+      description: "Run a free public demo on Vercel and Neon with the same code, for people to try Secure Vault.",
+    },
+    {
       slug: "configuration",
       title: "Configuration reference",
       description: "Every setting for the API and the web app, with defaults.",

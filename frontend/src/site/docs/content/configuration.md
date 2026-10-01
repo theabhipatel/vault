@@ -20,13 +20,13 @@ Boolean settings accept `true` or `false`. Settings without a default in the tab
 |---|---|---|
 | `ENVIRONMENT` | `development` | `development`, `test` or `production`. `production` turns off the interactive API docs (`/api/docs`) and the OpenAPI schema. `test` is for the test suite and doesn't start the email worker. The production compose file sets `production` for you. |
 | `APP_URL` | `http://localhost:29180` | The public origin of the web app, exactly as it appears in the browser's address bar. Used for links in emails, the CSRF Origin check, CORS and the Google sign-in redirect URI. |
-| `APP_NAME` | `Vault` | The name shown in emails, at the top of each message and in the signature line. |
+| `APP_NAME` | `Secure Vault` | The name shown in emails, at the top of each message and in the signature line. |
 
 ## Database
 
 | Setting | Default | What it does |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+asyncpg://vault:vault@localhost:29432/vault` | PostgreSQL connection URL. Keep the `postgresql+asyncpg://` scheme. The default matches the development `docker-compose.yml`. The production compose file builds this for you from `POSTGRES_PASSWORD`. |
+| `DATABASE_URL` | `postgresql+asyncpg://vault:vault@localhost:29432/vault` | PostgreSQL connection URL. The default matches the development `docker-compose.yml`. The production compose file builds this for you from `POSTGRES_PASSWORD`. Plain `postgresql://...?sslmode=require` URLs from hosted providers such as Neon also work: they're converted to the `postgresql+asyncpg://` form automatically. |
 | `DATABASE_ECHO` | `false` | Logs every SQL statement. Useful for debugging, too noisy otherwise. |
 
 ## Security and sessions
@@ -50,7 +50,7 @@ These settings only affect sign-in sessions. The vault's auto-lock isn't a serve
 | `SMTP_PASSWORD` | | SMTP password. |
 | `SMTP_STARTTLS` | `false` | Connects in plain text, then upgrades with STARTTLS. Usually port 587. |
 | `SMTP_TLS` | `false` | Uses TLS from the first byte (implicit TLS). Usually port 465. Turn on at most one of `SMTP_STARTTLS` and `SMTP_TLS`. |
-| `MAIL_FROM` | `Vault <no-reply@vault.local>` | The sender of every email, as `Name <address>`. |
+| `MAIL_FROM` | `Secure Vault <no-reply@vault.local>` | The sender of every email, as `Name <address>`. |
 | `EMAIL_WORKER_ENABLED` | `true` | Runs the background worker that delivers queued emails and does housekeeping, such as removing expired sessions and expiring old invitations. If it's off, emails stay queued and are never sent. |
 
 Emails are written to an outbox in the database first, then delivered by the worker, which retries failed deliveries with increasing delays. See [Email and Google sign-in](/docs/email-and-google).
@@ -92,6 +92,16 @@ When a limit is hit, the user sees "Too many attempts. Please try again in about
 | Setting | Default | What it does |
 |---|---|---|
 | `MAX_AVATAR_BYTES` | `1000000` | Largest profile picture you can upload, in bytes (about 1 MB). |
+
+## Serverless hosting
+
+These settings are for platforms that pause the API between requests, such as the [Vercel demo](/docs/vercel-demo). Leave them unset when you self-host: the defaults keep the normal long-running server behaviour.
+
+| Setting | Default | What it does |
+|---|---|---|
+| `SERVERLESS` | `false` | Doesn't start the email worker and housekeeping loops. Instead, each email is sent before the request that queued it returns, and database connections are opened per request instead of pooled, so they work through a transaction-mode pooler such as Neon's. |
+| `CRON_SECRET` | | Turns on `GET /api/internal/cron`, which retries unsent emails and does housekeeping once. Callers must send `Authorization: Bearer <CRON_SECRET>`. Without it, the endpoint returns 404. |
+| `CLIENT_IP_HEADER` | | A request header holding the visitor's IP address, set by a proxy you trust, for example `x-real-ip` on Vercel. Used for rate limits, the audit log and the sessions list. Set it only if every request passes through that proxy, otherwise clients could fake their IP. When unset, the connection's address is used, which behind the bundled nginx is already the real client IP. |
 
 ## Production compose settings
 

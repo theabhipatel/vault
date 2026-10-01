@@ -3,8 +3,9 @@
 import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from typing import Any
 
-from sqlalchemy import DateTime, MetaData, func
+from sqlalchemy import DateTime, MetaData, NullPool, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -39,13 +40,31 @@ class TimestampMixin:
     )
 
 
+def _engine_options(serverless: bool) -> dict[str, Any]:
+    if not serverless:
+        # Long-running server (self-hosted): keep a pool of warm connections.
+        return {"pool_pre_ping": True, "pool_size": 10, "max_overflow": 20}
+    # Serverless (SERVERLESS=true): a function instance may be frozen between requests, so a
+    # pooled connection could be dead or hold a slot on the database for nothing. Open a fresh
+    # connection per session instead and let the provider's pooler (Neon's pooled URL) share
+    # them. That pooler runs in transaction mode, where a prepared statement can't be relied on
+    # to exist on the next query's server connection, so asyncpg's statement caches are turned
+    # off and every statement gets a unique name.
+    return {
+        "poolclass": NullPool,
+        "connect_args": {
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+            "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
+        },
+    }
+
+
 _settings = get_settings()
 engine = create_async_engine(
     _settings.database_url,
     echo=_settings.database_echo,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    **_engine_options(_settings.serverless),
 )
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 

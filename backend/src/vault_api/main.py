@@ -41,22 +41,25 @@ MAX_BODY_BYTES = 8 * 1024 * 1024
 MAX_ROTATION_BODY_BYTES = 256 * 1024 * 1024
 
 
+async def clean_up_expired() -> None:
+    """One round of housekeeping: drop expired sessions, tokens and rate-limit windows."""
+    async with SessionLocal() as db:
+        now = utcnow()
+        await db.execute(delete(UserSession).where(UserSession.expires_at < now))
+        await db.execute(delete(EmailToken).where(EmailToken.expires_at < now - timedelta(days=7)))
+        await db.execute(
+            update(Invitation)
+            .where(Invitation.status == "pending", Invitation.expires_at < now)
+            .values(status="expired")
+        )
+        await ratelimit.purge_expired(db, timedelta(days=1))
+        await db.commit()
+
+
 async def housekeeping(stop: asyncio.Event, interval: float = 600) -> None:
     while not stop.is_set():
         try:
-            async with SessionLocal() as db:
-                now = utcnow()
-                await db.execute(delete(UserSession).where(UserSession.expires_at < now))
-                await db.execute(
-                    delete(EmailToken).where(EmailToken.expires_at < now - timedelta(days=7))
-                )
-                await db.execute(
-                    update(Invitation)
-                    .where(Invitation.status == "pending", Invitation.expires_at < now)
-                    .values(status="expired")
-                )
-                await ratelimit.purge_expired(db, timedelta(days=1))
-                await db.commit()
+            await clean_up_expired()
         except Exception:
             log.exception("Housekeeping failed")
         with suppress(TimeoutError):
@@ -67,7 +70,9 @@ async def housekeeping(stop: asyncio.Event, interval: float = 600) -> None:
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     stop = asyncio.Event()
     tasks: list[asyncio.Task[None]] = []
-    if settings.email_worker_enabled and settings.environment != "test":
+    # Background loops need a process that keeps running between requests. On serverless
+    # hosting (SERVERLESS=true) they are replaced by inline delivery and the cron endpoint.
+    if settings.email_worker_enabled and settings.environment != "test" and not settings.serverless:
         tasks.append(asyncio.create_task(email.run_worker(stop)))
         tasks.append(asyncio.create_task(housekeeping(stop)))
     yield
@@ -127,7 +132,15 @@ async def security_middleware(
                 "Your session security token is missing. Reload the page and try again."
             )
 
+    # Serverless only: notice when the endpoint queues an email, so it can be sent below.
+    outbox = email.track_request() if settings.serverless and is_api else None
+
     response = await call_next(request)
+
+    if outbox is not None and outbox.messages:
+        # The endpoint has committed by now. Send before returning, because a serverless
+        # platform may freeze the process as soon as the response is out.
+        await email.deliver_queued(outbox)
 
     if is_api and settings.csrf_cookie_name not in request.cookies:
         response.set_cookie(
@@ -177,6 +190,25 @@ async def rate_limited(_: Request, exc: ratelimit.RateLimited) -> JSONResponse:
 @app.get("/api/health", tags=["system"])
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/internal/cron", include_in_schema=False)
+async def cron(request: Request) -> JSONResponse:
+    """Retry unsent emails and clean up expired data, for hosts without background workers.
+
+    Off unless CRON_SECRET is set. Vercel Cron calls it once a day (see vercel.json) and sends
+    "Authorization: Bearer <CRON_SECRET>". It's a GET, so the CSRF check doesn't apply; the
+    secret is what protects it. Self-hosted installs don't need it: their worker does this.
+    """
+    secret = settings.cron_secret
+    supplied = request.headers.get("authorization", "")
+    if secret is None or not secrets.compare_digest(
+        supplied.encode(), f"Bearer {secret.get_secret_value()}".encode()
+    ):
+        return JSONResponse({"detail": "Not Found"}, status_code=status.HTTP_404_NOT_FOUND)
+    sent = await email.deliver_pending(batch=100)
+    await clean_up_expired()
+    return JSONResponse({"emails_sent": sent})
 
 
 for module in (auth, account, workspaces, roles, invitations, projects, documents, activity, vault):

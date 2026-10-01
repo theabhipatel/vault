@@ -3,6 +3,7 @@
 The acting identity always comes from the session cookie, never from request data.
 """
 
+import ipaddress
 import uuid
 from dataclasses import dataclass
 from datetime import timedelta
@@ -24,9 +25,26 @@ DB = Annotated[AsyncSession, Depends(get_db)]
 LAST_SEEN_RESOLUTION = timedelta(minutes=1)
 
 
+def client_ip(request: Request) -> str | None:
+    """The visitor's IP address, as used for rate limits, audit logs and the session list."""
+    header = get_settings().client_ip_header
+    if header:
+        # Behind a trusted proxy that reports the IP in a header (CLIENT_IP_HEADER, e.g.
+        # Vercel's x-real-ip). Take the first entry in case it's a forwarded-for style list,
+        # and ignore anything that isn't an IP address.
+        value = (request.headers.get(header) or "").split(",")[0].strip()
+        try:
+            return str(ipaddress.ip_address(value))
+        except ValueError:
+            pass
+    # Default: the connection's address (behind the bundled nginx, uvicorn's
+    # --proxy-headers has already replaced it with the forwarded client IP).
+    return request.client.host if request.client else None
+
+
 def get_meta(request: Request) -> RequestMeta:
     return RequestMeta(
-        ip=request.client.host if request.client else None,
+        ip=client_ip(request),
         user_agent=request.headers.get("user-agent"),
     )
 

@@ -2,8 +2,9 @@
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from pydantic import Field, SecretStr, computed_field
+from pydantic import Field, SecretStr, computed_field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -56,6 +57,50 @@ class Settings(BaseSettings):
     token_submit_ip_limit: int = 30
 
     max_avatar_bytes: int = Field(default=1_000_000)
+
+    # ---- Serverless hosting (the public Vercel demo) ------------------------------------------
+    # Self-hosted installs (Docker, `./scripts/dev.sh`) leave all three unset, which keeps the
+    # long-running server behaviour. See the docs page "Deploy a demo on Vercel".
+    #
+    # SERVERLESS=true is for platforms that freeze or stop the process between requests:
+    #   - the background email worker and housekeeping loops are not started (they would never
+    #     get CPU time), so each email is sent before the request that queued it returns;
+    #   - database connections are opened per request instead of being pooled, and are safe
+    #     to use through a transaction-mode connection pooler such as Neon's PgBouncer.
+    serverless: bool = False
+    # Enables GET /api/internal/cron, which runs one round of email retries and housekeeping.
+    # The caller must send "Authorization: Bearer <CRON_SECRET>" (Vercel Cron does this when
+    # the project has a CRON_SECRET variable). Unset = the endpoint answers 404.
+    cron_secret: SecretStr | None = None
+    # Request header that holds the visitor's IP address, set by a proxy you trust, for
+    # example `x-real-ip` on Vercel. Only set it when every request passes through that
+    # proxy, otherwise clients could spoof their IP. Unset = the connection's address, which
+    # uvicorn's --proxy-headers already resolves behind the bundled nginx.
+    client_ip_header: str | None = None
+
+    @field_validator("database_url")
+    @classmethod
+    def _asyncpg_url(cls, value: str) -> str:
+        """Accept the plain `postgresql://...?sslmode=require` URLs that hosted Postgres
+        providers (Neon, Supabase, ...) hand out, and turn them into what asyncpg expects.
+
+        URLs that already use `postgresql+asyncpg://` without `sslmode` are returned as-is,
+        so existing self-hosted configuration is unaffected.
+        """
+        parts = urlsplit(value)
+        scheme = parts.scheme
+        if scheme in ("postgres", "postgresql"):
+            scheme = "postgresql+asyncpg"
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        if scheme != parts.scheme or any(key == "sslmode" for key, _ in query):
+            # asyncpg calls it `ssl`, and doesn't know libpq's `channel_binding` option.
+            query = [
+                ("ssl" if key == "sslmode" else key, val)
+                for key, val in query
+                if key != "channel_binding"
+            ]
+            return urlunsplit(parts._replace(scheme=scheme, query=urlencode(query)))
+        return value
 
     @computed_field  # type: ignore[prop-decorator]
     @property

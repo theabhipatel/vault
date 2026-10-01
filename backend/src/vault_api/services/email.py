@@ -1,9 +1,20 @@
-"""Transactional email: templates, the outbox and the delivery worker."""
+"""Transactional email: templates, the outbox and the delivery worker.
+
+Every email is first written to the `email_outbox` table in the same transaction as the change
+that caused it, then delivered:
+- on a long-running server (self-hosted), by `run_worker`, a background loop;
+- on serverless hosting (SERVERLESS=true), right after the request that queued it, see
+  `track_request` / `deliver_queued`, with GET /api/internal/cron retrying failures.
+"""
 
 import asyncio
 import html
 import logging
+import uuid
+from collections.abc import Collection
 from contextlib import suppress
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 from datetime import timedelta
 from email.message import EmailMessage
 from urllib.parse import quote
@@ -76,7 +87,11 @@ def enqueue(
     footer: str | None = None,
 ) -> None:
     text_body, html_body = _render(title, paragraphs, action, footer)
-    db.add(EmailOutbox(to_address=to, subject=subject, text_body=text_body, html_body=html_body))
+    message = EmailOutbox(to_address=to, subject=subject, text_body=text_body, html_body=html_body)
+    db.add(message)
+    tracker = _request_tracker.get()
+    if tracker is not None:
+        tracker.messages.append(message)
 
 
 def link(path: str) -> str:
@@ -210,23 +225,24 @@ async def _send(message: EmailOutbox) -> None:
     )
 
 
-async def deliver_pending(batch: int = 20) -> int:
-    """Send due emails. Safe to run on several instances at once (SKIP LOCKED)."""
+async def deliver_pending(batch: int = 20, only: Collection[uuid.UUID] | None = None) -> int:
+    """Send due emails. Safe to run on several instances at once (SKIP LOCKED).
+
+    `only` limits delivery to those outbox rows (inline delivery sends just what the current
+    request queued).
+    """
     sent = 0
+    query = (
+        select(EmailOutbox)
+        .where(EmailOutbox.status == "pending", EmailOutbox.next_attempt_at <= utcnow())
+        .order_by(EmailOutbox.created_at)
+        .limit(batch)
+        .with_for_update(skip_locked=True)
+    )
+    if only is not None:
+        query = query.where(EmailOutbox.id.in_(only))
     async with SessionLocal() as db:
-        rows = (
-            (
-                await db.execute(
-                    select(EmailOutbox)
-                    .where(EmailOutbox.status == "pending", EmailOutbox.next_attempt_at <= utcnow())
-                    .order_by(EmailOutbox.created_at)
-                    .limit(batch)
-                    .with_for_update(skip_locked=True)
-                )
-            )
-            .scalars()
-            .all()
-        )
+        rows = (await db.execute(query)).scalars().all()
         for message in rows:
             try:
                 await _send(message)
@@ -246,6 +262,46 @@ async def deliver_pending(batch: int = 20) -> int:
                 sent += 1
         await db.commit()
     return sent
+
+
+# ---- Inline delivery (serverless only) -------------------------------------------------------
+
+
+@dataclass
+class RequestTracker:
+    """The emails `enqueue` added while handling the current request."""
+
+    messages: list[EmailOutbox] = field(default_factory=list)
+
+
+# Holds the tracker of the request being handled. The middleware creates it before running the
+# endpoint, and the endpoint's task inherits a copy of this context, so both see the same
+# object. Outside a tracked request (self-hosted, tests, scripts) it stays None.
+_request_tracker: ContextVar[RequestTracker | None] = ContextVar(
+    "email_request_tracker", default=None
+)
+
+
+def track_request() -> RequestTracker:
+    tracker = RequestTracker()
+    _request_tracker.set(tracker)
+    return tracker
+
+
+async def deliver_queued(tracker: RequestTracker) -> None:
+    """Send the emails this request queued, now that the endpoint has committed them.
+
+    Rows the endpoint didn't commit (it failed and rolled back) simply aren't found. Never
+    raises: a failed send stays in the outbox with a retry time for the cron endpoint, and the
+    user's action itself already succeeded.
+    """
+    ids = [m.id for m in tracker.messages if m.id is not None]
+    if not ids:
+        return
+    try:
+        await deliver_pending(batch=len(ids), only=ids)
+    except Exception:
+        log.exception("Inline email delivery failed")
 
 
 async def run_worker(stop: asyncio.Event, interval: float = 2.0) -> None:

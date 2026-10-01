@@ -77,6 +77,15 @@ function humanize(field: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
+/** Fallback text for a failed response whose body has no usable `detail`. */
+function statusMessage(status: number): string | undefined {
+  // 413 can come from the hosting platform rather than the API (Vercel caps request bodies at
+  // 4.5 MB), in which case the body isn't JSON. Self-hosted, the API's own message is used.
+  if (status === 413) return "This is too large for the server to accept. Try saving less at once."
+  if (status >= 500) return "The server had a problem. Please try again shortly."
+  return undefined
+}
+
 interface FetchResult<T> {
   data?: T
   error?: unknown
@@ -93,9 +102,7 @@ export async function unwrap<T>(promise: Promise<FetchResult<T>>): Promise<T> {
   }
   const { data, error, response } = result
   if (!response.ok) {
-    const fallback =
-      response.status >= 500 ? "The server had a problem. Please try again shortly." : undefined
-    throw new ApiError(response.status, errorMessage(error, fallback))
+    throw new ApiError(response.status, errorMessage(error, statusMessage(response.status)))
   }
   return data as T
 }
@@ -116,7 +123,7 @@ export async function rawRequest(path: string, init: RequestInit = {}): Promise<
     } catch {
       body = null
     }
-    throw new ApiError(response.status, errorMessage(body))
+    throw new ApiError(response.status, errorMessage(body, statusMessage(response.status)))
   }
   return response
 }

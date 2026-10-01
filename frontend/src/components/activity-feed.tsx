@@ -22,7 +22,7 @@ export function ActivityFeed({ items, workspaceId }: { items: Activity[]; worksp
         icon={ActivityIcon}
         title="No activity yet"
         description="Changes to projects and documents you can access will show up here."
-        className="py-8"
+        className="border-0 bg-transparent py-8"
       />
     )
   }

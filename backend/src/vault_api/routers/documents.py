@@ -27,6 +27,7 @@ from vault_api.schemas.project import (
 )
 from vault_api.services import audit
 from vault_api.services.access import accessible_project_ids, get_project
+from vault_api.services.audit import RequestMeta
 from vault_api.services.users import escape_like, user_refs
 
 from .projects import project_outs
@@ -101,6 +102,34 @@ async def _load(
     if not ctx.actor.has(VIEW_PERM[doc.kind]):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found.")
     return doc, project
+
+
+async def _load_for_read(
+    ctx: WorkspaceContext, db: DB, document_id: uuid.UUID, meta: RequestMeta
+) -> tuple[Document, Project]:
+    """`_load` for reads. Refused attempts to read a secure document are audited."""
+    try:
+        return await _load(ctx, db, document_id)
+    except HTTPException as exc:
+        doc = await db.scalar(
+            select(Document)
+            .join(Project, Project.id == Document.project_id)
+            .where(Document.id == document_id, Project.workspace_id == ctx.workspace.id)
+        )
+        if doc is not None and doc.kind == "secure":
+            await audit.record_now(
+                action="secure_document.access_denied",
+                actor=ctx.user,
+                meta=meta,
+                workspace_id=ctx.workspace.id,
+                project_id=doc.project_id,
+                target_type="document",
+                target_id=doc.id,
+                target_label=doc.name,
+                result="denied",
+                details={"status": exc.status_code},
+            )
+        raise
 
 
 @router.get("/projects/{project_id}/documents")
@@ -200,7 +229,7 @@ async def recent_documents(
 
 @router.get("/documents/{document_id}")
 async def get_document(document_id: uuid.UUID, ctx: WsCtx, db: DB, meta: Meta) -> DocumentOut:
-    doc, project = await _load(ctx, db, document_id)
+    doc, project = await _load_for_read(ctx, db, document_id, meta)
     # Secure views are logged when the ciphertext is fetched (the server can't see decryption).
     audit.record(
         db,
@@ -298,7 +327,7 @@ async def delete_document(document_id: uuid.UUID, ctx: WsCtx, db: DB, meta: Meta
     ctx.require(DELETE_PERM[doc.kind])
     audit.record(
         db,
-        action="document.deleted",
+        action="secure_document.deleted" if doc.kind == "secure" else "document.deleted",
         actor=ctx.user,
         meta=meta,
         workspace_id=ctx.workspace.id,
@@ -353,9 +382,26 @@ async def _version(db: DB, doc: Document, version: int) -> DocumentVersion:
 
 
 @router.get("/documents/{document_id}/versions/{version}")
-async def get_version(document_id: uuid.UUID, version: int, ctx: WsCtx, db: DB) -> VersionOut:
-    doc, _ = await _load(ctx, db, document_id)
+async def get_version(
+    document_id: uuid.UUID, version: int, ctx: WsCtx, db: DB, meta: Meta
+) -> VersionOut:
+    doc, project = await _load_for_read(ctx, db, document_id, meta)
     v = await _version(db, doc, version)
+    secure = doc.kind == "secure"
+    audit.record(
+        db,
+        action="secure_document.version_viewed" if secure else "document.version_viewed",
+        actor=ctx.user,
+        meta=meta,
+        workspace_id=ctx.workspace.id,
+        project_id=project.id,
+        target_type="document",
+        target_id=doc.id,
+        target_label=doc.name,
+        details={"version": v.version, "current_version": doc.version}
+        | ({"key_version": v.key_version} if secure else {}),
+    )
+    await db.commit()
     refs = await user_refs(db, [v.created_by_id])
     return VersionOut(
         version=v.version,

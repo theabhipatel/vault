@@ -14,6 +14,7 @@ import {
   wipe,
 } from "./crypto"
 import type { DocContext, Encrypted } from "./crypto"
+import { auditedDecrypt } from "./audit"
 import { vaultSession } from "./session"
 import { classifyRecipients, rememberKeys } from "./trust"
 import type { KeyChange } from "./trust"
@@ -133,15 +134,21 @@ export async function createSecureDocument(workspaceId: string, projectId: strin
 }
 
 export async function openSecureDocument(workspaceId: string, doc: SecureDoc): Promise<string> {
-  if (!doc.ciphertext || !doc.nonce || !doc.key_version) throw new Error("This document has no encrypted content.")
+  const { ciphertext, nonce, key_version: keyVersion } = doc
+  if (!ciphertext || !nonce || !keyVersion) throw new Error("This document has no encrypted content.")
   const { key } = await projectKeyFor(workspaceId, doc.project_id)
-  return decryptDocument(key, { ciphertext: doc.ciphertext, nonce: doc.nonce }, docContext(workspaceId, doc, doc.version, doc.key_version))
+  return auditedDecrypt(workspaceId, doc.id, doc.version, () =>
+    decryptDocument(key, { ciphertext, nonce }, docContext(workspaceId, doc, doc.version, keyVersion)),
+  )
 }
 
 export async function openSecureVersion(workspaceId: string, doc: SecureDoc, version: Schemas["VersionOut"]): Promise<string> {
-  if (!version.ciphertext || !version.nonce || !version.key_version) throw new Error("This version has no encrypted content.")
+  const { ciphertext, nonce, key_version: keyVersion } = version
+  if (!ciphertext || !nonce || !keyVersion) throw new Error("This version has no encrypted content.")
   const { key } = await projectKeyFor(workspaceId, doc.project_id)
-  return decryptDocument(key, { ciphertext: version.ciphertext, nonce: version.nonce }, docContext(workspaceId, doc, version.version, version.key_version))
+  return auditedDecrypt(workspaceId, doc.id, version.version, () =>
+    decryptDocument(key, { ciphertext, nonce }, docContext(workspaceId, doc, version.version, keyVersion)),
+  )
 }
 
 export async function saveSecureDocument(workspaceId: string, doc: SecureDoc, content: string, opts: { name?: string; restoredFrom?: number } = {}): Promise<SecureDoc> {

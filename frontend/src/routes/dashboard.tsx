@@ -214,10 +214,10 @@ export function DashboardPage() {
       </section>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
-        <section>
+        <section className="flex flex-col">
           <SectionTitle>Recently edited</SectionTitle>
-          <Card className="py-2">
-            <CardContent className="px-2">
+          <Card className="flex-1 py-2">
+            <CardContent className="flex flex-1 flex-col px-2">
               {recent.isPending ? (
                 <ListSkeleton rows={4} className="p-2" />
               ) : recent.error ? (
@@ -235,10 +235,10 @@ export function DashboardPage() {
             </CardContent>
           </Card>
         </section>
-        <section>
+        <section className="flex flex-col">
           <SectionTitle>Recent activity</SectionTitle>
-          <Card className="py-3">
-            <CardContent className="px-4">
+          <Card className="flex-1 py-2">
+            <CardContent className="flex flex-1 flex-col px-4">
               {activity.isPending ? (
                 <ListSkeleton rows={4} />
               ) : activity.error ? (

@@ -6,15 +6,19 @@ import { qk } from "@/hooks/api"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import { useTheme } from "@/lib/theme"
 import type { Me, ThemePreference } from "@/lib/types"
+import { reportVaultEvent } from "@/vault/audit"
 import { vaultSession } from "@/vault/session"
 
 export function useSignOut() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   return useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       // Lock first: keys leave memory even if the network request fails.
+      const wasUnlocked = vaultSession.isUnlocked
       vaultSession.lock()
+      // Recorded while the session still exists.
+      if (wasUnlocked) await reportVaultEvent({ event: "locked", reason: "sign_out" })
       return unwrap(client.POST("/api/auth/signout"))
     },
     onSettled: () => {

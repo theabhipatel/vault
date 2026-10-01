@@ -288,8 +288,24 @@ measures counter that:
   identity always comes from the session, never from request data.
 - **Audit log:**
   - A PostgreSQL trigger rejects `UPDATE`, `DELETE` and `TRUNCATE`.
-  - It records secure-document views (when ciphertext is fetched), key creation, grants, rotations
-    and vault events.
+  - Every entry records who, what, when, from where (IP address and user agent), the result
+    (`success`, `failure` or `denied`) and structured details. Select a row on the audit page to see
+    all of it.
+  - **Recorded by the server:** secure-document fetches (current and old versions), saves, renames,
+    restores, deletes, refused access attempts, key creation, grants, rotations, and vault setup,
+    password change, recovery and reset.
+  - **Reported by the browser** (marked "Reported by the browser"): things the server can't observe,
+    because vault passwords and plaintext never leave the device. These are:
+    - wrong vault passwords and recovery keys (with the attempt count and a server-side count of
+      failures in the last hour);
+    - unlocks, and locks (manual, idle timeout or sign-out);
+    - successful decryption, and integrity-check failures, which can mean tampered ciphertext and
+      alert workspace admins;
+    - plaintext downloads, and copied or revealed `.env` values.
+  - Reports carry only enums and numbers, never free text or `.env` key names, and are rate-limited.
+  - Five wrong vault secrets within an hour email the account owner and show an in-app alert.
+  - Account-level events (sign-ins and vault events) appear in the audit log of every workspace the
+    user belongs to.
   - It never contains content, passwords or key material. The browser run checks the database for
     the plaintext secret and finds zero occurrences.
 - **Headers and front-end integrity:**
@@ -326,6 +342,11 @@ measures counter that:
    the 256 MB request cap on the rotation endpoint.
 7. **Clipboard clearing is best effort.** Copied secrets are cleared after 30 s only where the browser
    allows clipboard access.
+8. **Browser-reported audit events are best effort.** Wrong vault passwords, unlocks and
+   decryptions happen only on the user's device, so the server can't verify them. A modified
+   client, or someone who copied the encrypted key blob, can guess passwords offline without
+   reporting anything. The real protection against guessing is Argon2id with a strong vault
+   password. These reports catch everyday misuse and mistakes through the normal app.
 
 ---
 

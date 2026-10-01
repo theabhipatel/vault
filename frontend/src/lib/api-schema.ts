@@ -1271,6 +1271,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vault/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report Vault Event */
+        post: operations["report_vault_event_api_vault_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/workspaces/{workspace_id}/documents/{document_id}/secure-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report Secure Document Event */
+        post: operations["report_secure_document_event_api_workspaces__workspace_id__documents__document_id__secure_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2093,6 +2127,21 @@ export interface components {
             /** Nonce */
             nonce: string;
         };
+        /**
+         * SecureDocumentEventIn
+         * @description What happened to a secure document's plaintext inside the browser.
+         */
+        SecureDocumentEventIn: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "decrypted" | "decrypt_failed" | "downloaded" | "value_copied" | "values_revealed";
+            /** Version */
+            version?: number | null;
+            /** Count */
+            count?: number | null;
+        };
         /** SecureDocumentUpdate */
         SecureDocumentUpdate: {
             /** Expected Version */
@@ -2195,6 +2244,25 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VaultEventIn
+         * @description Account-level vault events (not tied to one workspace).
+         */
+        VaultEventIn: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "unlock_failed" | "unlocked" | "locked";
+            /** Method */
+            method?: ("password" | "recovery_key") | null;
+            /** Context */
+            context?: ("unlock" | "password_change" | "recovery") | null;
+            /** Reason */
+            reason?: ("manual" | "idle" | "sign_out") | null;
+            /** Attempt */
+            attempt?: number | null;
         };
         /** VaultKeysIn */
         VaultKeysIn: {
@@ -5024,6 +5092,71 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DocumentOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_vault_event_api_vault_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VaultEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_secure_document_event_api_workspaces__workspace_id__documents__document_id__secure_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+                workspace_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecureDocumentEventIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

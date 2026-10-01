@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy import select
 
-from tests.conftest import Client, add_member, signup_and_verify
+from tests.conftest import Client, add_member, emails_to, signup_and_verify
 from vault_api.db import SessionLocal
 from vault_api.models import AuditLog
 
@@ -309,3 +309,131 @@ async def test_vault_reset_revokes_and_warns(client: Client) -> None:
     # A lost project can be cleared and started again.
     assert (await client.post(f"{base(ws, solo)}/abandon")).status_code == 200
     assert (await client.get(base(ws, solo))).json()["my_state"] == "uninitialized"
+
+
+async def audit_rows(ws_client: Client, ws: str, action: str) -> list[dict[str, Any]]:
+    res = await ws_client.get(f"/api/workspaces/{ws}/audit", params={"action": action})
+    assert res.status_code == 200, res.text
+    rows: list[dict[str, Any]] = res.json()
+    return rows
+
+
+async def test_browser_reported_vault_events(client: Client) -> None:
+    owner = await signup_and_verify(client)
+    ws = owner["workspace_id"]
+    member, member_me = await add_member(client, ws, "Member")
+    # No vault yet: nothing to report on.
+    assert (await member.post("/api/vault/events", json={"event": "unlocked"})).status_code == 404
+    await setup_vault(member)
+    # Only enums and bounded numbers are accepted: no free text can reach the log.
+    bad = {"event": "unlock_failed", "method": "password; DROP TABLE"}
+    assert (await member.post("/api/vault/events", json=bad)).status_code == 422
+
+    for attempt in range(1, 6):
+        res = await member.post(
+            "/api/vault/events",
+            json={
+                "event": "unlock_failed",
+                "method": "password",
+                "context": "unlock",
+                "attempt": attempt,
+            },
+        )
+        assert res.status_code == 204, res.text
+    await member.post(
+        "/api/vault/events", json={"event": "unlocked", "method": "password", "attempt": 6}
+    )
+    await member.post("/api/vault/events", json={"event": "locked", "reason": "idle"})
+
+    # Account-level vault events show up in the audit log of every workspace the user is in.
+    failures = await audit_rows(client, ws, "vault.unlock_failed")
+    assert len(failures) == 5
+    latest = failures[0]
+    assert latest["actor_id"] == member_me["id"] and latest["result"] == "failure"
+    assert latest["details"] == {
+        "source": "browser",
+        "method": "password",
+        "context": "unlock",
+        "attempt": 5,
+        "failures_last_hour": 5,
+    }
+    assert latest["ip"] and latest["user_agent"]
+    assert (await audit_rows(client, ws, "vault.unlocked"))[0]["details"]["attempt"] == 6
+    assert (await audit_rows(client, ws, "vault.locked"))[0]["details"] == {
+        "source": "browser",
+        "reason": "idle",
+    }
+    assert await audit_rows(client, ws, "vault.setup")  # server-side account events too
+
+    # The fifth failure within an hour warns the account owner by email and in the app.
+    subjects = [e.subject for e in await emails_to(member_me["email"])]
+    assert subjects.count("Several wrong vault password attempts") == 1
+    notes = (await member.get("/api/notifications")).json()["items"]
+    assert any(n["type"] == "vault.unlock_failures" for n in notes)
+
+
+async def test_secure_document_events_and_denials(client: Client) -> None:
+    owner = await signup_and_verify(client)
+    ws = owner["workspace_id"]
+    pid = await project(client, ws)
+    outsider, outsider_me = await add_member(client, ws, "Member", name="Outsider")
+    owner_pk = await setup_vault(client)
+    await client.post(f"{base(ws, pid)}/init", json={"grants": [grant(owner["id"], owner_pk)]})
+    doc = await secure_doc(client, ws, pid)
+    url = f"/api/workspaces/{ws}/documents/{doc['id']}"
+    await client.put(
+        f"{url}/secure",
+        json={"expected_version": 1, "key_version": 1, "ciphertext": b64(80), "nonce": b64(12)},
+    )
+
+    events = f"{url}/secure-events"
+    assert (await client.post(events, json={"event": "decrypted"})).status_code == 204
+    assert (await client.post(events, json={"event": "decrypted", "version": 1})).status_code == 204
+    assert (await client.post(events, json={"event": "decrypt_failed"})).status_code == 204
+    assert (await client.post(events, json={"event": "downloaded"})).status_code == 204
+    assert (
+        await client.post(events, json={"event": "values_revealed", "count": 3})
+    ).status_code == 204
+    assert (await client.post(events, json={"event": "decrypted", "version": 9})).status_code == 400
+    assert (await client.post(events, json={"event": "copied_all"})).status_code == 422
+
+    decrypted = await audit_rows(client, ws, "secure_document.decrypted")
+    assert [r["details"]["version"] for r in decrypted] == [1, 2]
+    assert decrypted[1]["details"] == {
+        "source": "browser",
+        "version": 2,
+        "current_version": 2,
+        "key_version": 1,
+        "format": "env",
+    }
+    assert decrypted[0]["target_id"] == doc["id"] and decrypted[0]["project_id"] == pid
+    failed = (await audit_rows(client, ws, "secure_document.decrypt_failed"))[0]
+    assert failed["result"] == "failure"
+    assert failed["details"]["reason"] == "integrity_check_failed"
+    revealed = (await audit_rows(client, ws, "secure_document.values_revealed"))[0]
+    assert revealed["details"]["count"] == 3
+
+    # Reading an old encrypted version is logged by the server when the ciphertext is fetched.
+    assert (await client.get(f"{url}/versions/1")).status_code == 200
+    version_viewed = (await audit_rows(client, ws, "secure_document.version_viewed"))[0]
+    assert version_viewed["details"] == {"version": 1, "current_version": 2, "key_version": 1}
+
+    # Someone without access to the project is refused, and the attempt is recorded.
+    assert (await outsider.get(url)).status_code == 404
+    assert (await outsider.post(events, json={"event": "decrypted"})).status_code == 404
+    denied = await audit_rows(client, ws, "secure_document.access_denied")
+    assert len(denied) == 1  # the event endpoint is not a read: only the GET is recorded
+    assert denied[0]["actor_id"] == outsider_me["id"] and denied[0]["result"] == "denied"
+
+    # Browser-side handling of plaintext is audited but kept out of the dashboard feed.
+    feed = (await client.get(f"/api/workspaces/{ws}/activity", params={"limit": 50})).json()
+    assert {r["action"] for r in feed} & {
+        "secure_document.decrypted",
+        "secure_document.downloaded",
+        "secure_document.values_revealed",
+        "secure_document.version_viewed",
+    } == set()
+
+    # Deleting a secure document is filed under secure documents.
+    assert (await client.delete(url)).status_code == 200
+    assert await audit_rows(client, ws, "secure_document.deleted")

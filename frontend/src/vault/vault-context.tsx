@@ -8,6 +8,7 @@ import { client, unwrap } from "@/lib/api"
 import type { Schemas } from "@/lib/api"
 import { KeyChangeDialog, SetupVaultDialog, UnlockVaultDialog } from "@/components/vault/vault-dialogs"
 
+import { auditedUnlock, reportVaultEvent } from "./audit"
 import { createVault, unlockWithPassword, unlockWithRecoveryKey } from "./crypto"
 import { calibrateKdf, derive } from "./kdf"
 import { runPendingWork } from "./protocol"
@@ -129,6 +130,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     let timer = window.setTimeout(lockForInactivity, autoLockMinutes * 60_000)
     function lockForInactivity() {
       vaultSession.lock()
+      void reportVaultEvent({ event: "locked", reason: "idle" })
       toast("Your vault locked after inactivity.")
     }
     const reset = () => {
@@ -162,12 +164,12 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       },
       unlock: async (password) => {
         const stored = requireVault()
-        const keypair = await unlockWithPassword(stored, stored.user_id, password, derive)
+        const keypair = await auditedUnlock("password", "unlock", () => unlockWithPassword(stored, stored.user_id, password, derive))
         vaultSession.unlock(stored.user_id, keypair)
       },
       unlockWithRecovery: async (recoveryKey) => {
         const stored = requireVault()
-        const keypair = await unlockWithRecoveryKey(stored, stored.user_id, recoveryKey)
+        const keypair = await auditedUnlock("recovery_key", "unlock", () => unlockWithRecoveryKey(stored, stored.user_id, recoveryKey))
         vaultSession.unlock(stored.user_id, keypair)
       },
       setup: async (password) => {
@@ -180,7 +182,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         await invalidateVaultViews()
         return created.recoveryKey
       },
-      lock: () => vaultSession.lock(),
+      lock: () => {
+        if (!vaultSession.isUnlocked) return
+        vaultSession.lock()
+        void reportVaultEvent({ event: "locked", reason: "manual" })
+      },
       openUnlock: () => setUnlockOpen(true),
       openSetup: () => setSetupOpen(true),
       syncNow,

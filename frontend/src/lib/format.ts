@@ -90,11 +90,15 @@ const ACTION_LABELS: Record<string, string> = {
   "document.updated": "Edited document",
   "document.deleted": "Deleted document",
   "document.restored": "Restored version",
+  "document.version_viewed": "Viewed old version",
   "vault.access_revoked": "Secure access revoked",
   "vault.setup": "Set up vault",
   "vault.password_changed": "Changed vault password",
   "vault.recovery_regenerated": "Regenerated recovery key",
   "vault.recovered": "Recovered vault",
+  "vault.unlocked": "Unlocked vault",
+  "vault.unlock_failed": "Wrong vault password",
+  "vault.locked": "Locked vault",
   "vault.reset": "Reset vault",
   "vault.key_changed": "Vault key changed",
   "vault.key_created": "Created project key",
@@ -108,6 +112,73 @@ const ACTION_LABELS: Record<string, string> = {
   "secure_document.updated": "Edited secure document",
   "secure_document.restored": "Restored secure version",
   "secure_document.renamed": "Renamed secure document",
+  "secure_document.deleted": "Deleted secure document",
+  "secure_document.version_viewed": "Fetched old secure version",
+  "secure_document.decrypted": "Decrypted secure document",
+  "secure_document.decrypt_failed": "Secure document failed integrity check",
+  "secure_document.downloaded": "Downloaded decrypted copy",
+  "secure_document.value_copied": "Copied a secret value",
+  "secure_document.values_revealed": "Revealed secret values",
+  "secure_document.access_denied": "Denied access to secure document",
+}
+
+/** Readable labels for audit `details` keys and enum values. Unknown ones are shown as-is. */
+const DETAIL_LABELS: Record<string, string> = {
+  source: "Recorded by",
+  method: "Method",
+  context: "Where",
+  reason: "Reason",
+  attempt: "Attempt in this tab",
+  failures_last_hour: "Failures in the last hour",
+  version: "Version",
+  current_version: "Current version",
+  key_version: "Key version",
+  restored_from: "Restored from version",
+  format: "Format",
+  count: "Values",
+  kind: "Kind",
+  status: "Response",
+  fields: "Changed",
+  from: "Previous name",
+  kdf_ops: "KDF passes",
+  kdf_mem: "KDF memory (bytes)",
+  key_epoch: "Key epoch",
+  added: "Added",
+  removed: "Removed",
+  role: "Role",
+  to: "To",
+  rank: "Rank",
+  permissions: "Permissions",
+  projects: "Projects",
+  recipients: "Recipients",
+  held_key: "Held the key",
+  secure_documents_deleted: "Secure documents deleted",
+}
+
+const DETAIL_VALUES: Record<string, string> = {
+  browser: "The user's browser",
+  password: "Vault password",
+  recovery_key: "Recovery key",
+  unlock: "Unlock prompt",
+  password_change: "Changing vault password",
+  recovery: "Vault recovery",
+  manual: "Locked by the user",
+  idle: "Auto-lock after inactivity",
+  sign_out: "Signed out",
+  integrity_check_failed: "Encrypted data failed its integrity check",
+  vault_reset: "Vault reset",
+}
+
+export function detailLabel(key: string): string {
+  return DETAIL_LABELS[key] ?? key.replace(/_/g, " ")
+}
+
+export function detailValue(value: unknown): string {
+  if (value === null || value === undefined) return "—"
+  if (Array.isArray(value)) return value.map(detailValue).join(", ")
+  if (typeof value === "object") return JSON.stringify(value)
+  const text = String(value)
+  return DETAIL_VALUES[text] ?? text
 }
 
 export function actionLabel(action: string): string {

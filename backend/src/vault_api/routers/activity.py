@@ -24,7 +24,19 @@ router = APIRouter(tags=["activity"])
 
 # Events that describe work inside projects; shown on the dashboard to anyone with access.
 FEED_PREFIXES = ("project.", "document.", "secure_document.")
-FEED_EXCLUDE = ("document.viewed", "secure_document.viewed")
+# Reads are audited but aren't "activity"; neither are browser-side handling of plaintext.
+FEED_EXCLUDE = (
+    "document.viewed",
+    "document.version_viewed",
+    "secure_document.viewed",
+    "secure_document.version_viewed",
+    "secure_document.decrypted",
+    "secure_document.downloaded",
+    "secure_document.value_copied",
+    "secure_document.values_revealed",
+)
+# Account-level events (no workspace) that every workspace a user belongs to should see.
+ACCOUNT_EVENT_PREFIXES = ("auth.sign_in", "vault.")
 
 
 async def _rows_out(db: DB, rows: list[AuditLog]) -> list[ActivityOut]:
@@ -91,12 +103,12 @@ def _audit_query(
     date_to: date | None,
 ) -> Select[AuditLog]:
     member_ids = select(Membership.user_id).where(Membership.workspace_id == ctx.workspace.id)
-    # Workspace events, plus account sign-in events of current members.
+    # Workspace events, plus account sign-in and vault events of current members.
     scope = or_(
         AuditLog.workspace_id == ctx.workspace.id,
         and_(
             AuditLog.workspace_id.is_(None),
-            AuditLog.action.startswith("auth.sign_in"),
+            or_(*(AuditLog.action.startswith(p) for p in ACCOUNT_EVENT_PREFIXES)),
             AuditLog.actor_id.in_(member_ids),
         ),
     )

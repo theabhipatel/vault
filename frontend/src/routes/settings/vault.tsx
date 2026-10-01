@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useMe } from "@/hooks/api"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import { shortDate } from "@/lib/format"
+import { auditedUnlock } from "@/vault/audit"
 import { DecryptionError, createVault, rewrapWithNewRecoveryKey, rewrapWithPassword, unlockWithPassword, unlockWithRecoveryKey, wipe } from "@/vault/crypto"
 import type { Keypair } from "@/vault/crypto"
 import { calibrateKdf, derive } from "@/vault/kdf"
@@ -201,7 +202,11 @@ function ChangePasswordDialog({ userId, onClose }: { userId: string; onClose: ()
       if (!vault.vault) throw new Error("No vault")
       // Prove knowledge of the current password before replacing it.
       try {
-        const check = await unlockWithPassword(vault.vault, userId, current, derive)
+        const stored = vault.vault
+        // Already unlocked: only a wrong password is worth recording here.
+        const check = await auditedUnlock("password", "password_change", () => unlockWithPassword(stored, userId, current, derive), {
+          reportSuccess: false,
+        })
         wipe(check.privateKey)
       } catch (e) {
         if (e instanceof DecryptionError) throw new Error("Your current vault password isn't right.")
@@ -315,7 +320,8 @@ function RecoverDialog({ userId, email, onClose }: { userId: string; email: stri
   const check = useMutation({
     mutationFn: async () => {
       if (!vault.vault) throw new Error("No vault")
-      return unlockWithRecoveryKey(vault.vault, userId, recoveryInput)
+      const stored = vault.vault
+      return auditedUnlock("recovery_key", "recovery", () => unlockWithRecoveryKey(stored, userId, recoveryInput))
     },
     onSuccess: (kp) => {
       setKeypair(kp)

@@ -279,6 +279,13 @@ def send_vault_event(db: AsyncSession, to: str, event: str) -> None:
             "automatically; projects where you were the only key holder can no longer "
             "be decrypted.",
         ),
+        "unlock_failures": (
+            "Several wrong vault password attempts",
+            "Repeated wrong vault password attempts",
+            "Someone signed in to your account entered a wrong vault password or recovery key "
+            "several times in the last hour. Your vault is still protected: it can only be "
+            "opened with the right password.",
+        ),
     }
     subject, title, body = subjects[event]
     enqueue(

@@ -202,3 +202,32 @@ class SecureDocumentUpdate(APIModel):
     ciphertext: Ciphertext
     nonce: Nonce
     restored_from: int | None = None
+
+
+# ---- Browser-reported audit events ----------------------------------------------------------
+# Unlocking and decryption happen only in the browser, so the server can't observe them. The
+# browser reports them here. Every field is an enum or a bounded number (no free text), so a
+# client can't write arbitrary content into the audit log.
+
+
+class VaultEventIn(APIModel):
+    """Account-level vault events (not tied to one workspace)."""
+
+    event: Literal["unlock_failed", "unlocked", "locked"]
+    method: Literal["password", "recovery_key"] | None = None
+    # unlock_failed: which screen the wrong secret was entered on.
+    context: Literal["unlock", "password_change", "recovery"] | None = None
+    # locked: why the vault locked.
+    reason: Literal["manual", "idle", "sign_out"] | None = None
+    # Consecutive failures in this browser tab, as counted by the browser.
+    attempt: int | None = Field(default=None, ge=1, le=1000)
+
+
+class SecureDocumentEventIn(APIModel):
+    """What happened to a secure document's plaintext inside the browser."""
+
+    event: Literal["decrypted", "decrypt_failed", "downloaded", "value_copied", "values_revealed"]
+    # The document version the event is about (defaults to the current one).
+    version: int | None = Field(default=None, ge=1)
+    # values_revealed: how many .env values became visible.
+    count: int | None = Field(default=None, ge=1, le=10_000)

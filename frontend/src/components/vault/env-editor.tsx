@@ -26,10 +26,12 @@ interface Props {
   onChange: (value: string) => void
   readOnly?: boolean
   fileName: string
+  /** Called when plaintext values are exposed: shown, copied or exported (for the audit log). */
+  onAudit?: (event: "values_revealed" | "value_copied" | "downloaded", count?: number) => void
 }
 
 /** Key/value editor for secure .env documents. Values are masked by default. */
-export function EnvEditor({ value, onChange, readOnly = false, fileName }: Props) {
+export function EnvEditor({ value, onChange, readOnly = false, fileName, onAudit }: Props) {
   const [rows, setRows] = useState<EnvRow[]>(() => parseEnv(value))
   const [mode, setMode] = useState<"table" | "raw">("table")
   const [raw, setRaw] = useState(value)
@@ -48,17 +50,26 @@ export function EnvEditor({ value, onChange, readOnly = false, fileName }: Props
     commit(rows.map((r) => (r.id === id && r.kind === "pair" ? { ...r, ...patch } : r)))
   const remove = (id: string) => commit(rows.filter((r) => r.id !== id))
   const add = () => commit([...rows, { kind: "pair", id: rowId(), key: "", value: "" }])
-  const toggleReveal = (id: string) =>
+  const toggleReveal = (id: string) => {
+    if (!revealed.has(id)) onAudit?.("values_revealed", 1)
     setRevealed((s) => {
       const next = new Set(s)
       if (next.has(id)) next.delete(id)
       else next.add(id)
       return next
     })
+  }
+  const toggleRevealAll = () => {
+    if (revealed.size > 0) return setRevealed(new Set())
+    const pairs = rows.filter((r) => r.kind === "pair").length
+    if (pairs > 0) onAudit?.("values_revealed", pairs)
+    setRevealed(new Set(rows.map((r) => r.id)))
+  }
 
   const copy = async (row: EnvPair) => {
     try {
       await copyText(row.value, { secret: true })
+      onAudit?.("value_copied")
       setCopied(row.id)
       toast.success(`Copied ${row.key || "value"}. The clipboard clears in 30 seconds.`)
       window.setTimeout(() => setCopied((c) => (c === row.id ? null : c)), 1500)
@@ -74,12 +85,18 @@ export function EnvEditor({ value, onChange, readOnly = false, fileName }: Props
     a.download = fileName.endsWith(".env") || fileName.startsWith(".env") ? fileName : `${fileName}.env`
     a.click()
     URL.revokeObjectURL(url)
+    onAudit?.("downloaded")
     toast("Downloaded. Remember this file is now unencrypted on your disk.")
   }
 
   const switchMode = (next: "table" | "raw") => {
     if (next === "table") setRows(parseEnv(raw))
-    else setRaw(serializeEnv(rows))
+    else {
+      setRaw(serializeEnv(rows))
+      // Raw text shows every value unmasked.
+      const pairs = rows.filter((r) => r.kind === "pair").length
+      if (pairs > 0) onAudit?.("values_revealed", pairs)
+    }
     setMode(next)
   }
 
@@ -102,7 +119,7 @@ export function EnvEditor({ value, onChange, readOnly = false, fileName }: Props
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setRevealed(revealed.size > 0 ? new Set() : new Set(rows.map((r) => r.id)))}
+              onClick={toggleRevealAll}
             >
               {revealed.size > 0 ? <EyeOff /> : <Eye />} {revealed.size > 0 ? "Hide all" : "Reveal all"}
             </Button>

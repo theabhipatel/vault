@@ -38,6 +38,8 @@ const ICONS: Record<string, LucideIcon> = {
   "vault.access_pending": Hourglass,
   "vault.setup_reminder": ShieldAlert,
   "vault.key_changed": ShieldAlert,
+  "vault.unlock_failures": ShieldAlert,
+  "secure_document.decrypt_failed": ShieldAlert,
 }
 
 export function useNotificationActions() {

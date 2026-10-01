@@ -51,6 +51,7 @@ import { fullDate, relativeTime } from "@/lib/format"
 import type { DocumentFull } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { NotFoundContent } from "@/routes/not-found"
+import { reportDocumentEvent } from "@/vault/audit"
 import { DecryptionError } from "@/vault/crypto"
 import { getProjectVault, openSecureDocument, openSecureVersion, saveSecureDocument } from "@/vault/protocol"
 import { useVault } from "@/vault/vault-context"
@@ -304,7 +305,9 @@ function DocumentEditor({
   const [name, setName] = useState(doc.name)
   // Bumped when content is replaced from outside (restore, reload) so child editors re-read it.
   const [epoch, setEpoch] = useState(0)
-  const [mode, setMode] = useState<ViewMode>(() => (window.innerWidth >= 1024 ? "split" : "write"))
+  // Documents open read-only ("View"); editing is one click away. A new, empty document opens
+  // for editing, since there is nothing to read yet.
+  const [mode, setMode] = useState<ViewMode>(() => (doc.can_edit && !initialContent.trim() ? "write" : "preview"))
   const [historyOpen, setHistoryOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [conflict, setConflict] = useState(false)
@@ -419,7 +422,10 @@ function DocumentEditor({
     a.download = /\.(md|txt|env)$/i.test(safe) ? safe : `${safe}.${isMarkdown ? "md" : isEnv ? "env" : "txt"}`
     a.click()
     URL.revokeObjectURL(url)
-    if (secure) toast("Downloaded. This copy is no longer encrypted.")
+    if (secure) {
+      reportDocumentEvent(workspaceId, doc.id, { event: "downloaded", version: doc.version })
+      toast("Downloaded. This copy is no longer encrypted.")
+    }
   }
 
   const history = useMemo(
@@ -427,8 +433,9 @@ function DocumentEditor({
     [backend, doc],
   )
 
-  const showEditor = !readOnly && (mode === "write" || mode === "split" || !isMarkdown)
-  const showPreview = isMarkdown && (readOnly || mode === "preview" || mode === "split")
+  const viewing = readOnly || mode === "preview"
+  const showEditor = !viewing && (mode === "write" || (isMarkdown && mode === "split"))
+  const showPreview = isMarkdown && (viewing || mode === "split")
 
   return (
     <Page wide className="flex min-h-[calc(100dvh-3.5rem)] flex-col">
@@ -458,26 +465,28 @@ function DocumentEditor({
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {isMarkdown && !readOnly ? (
+          {!readOnly ? (
             <ToggleGroup
               type="single"
               variant="outline"
               size="sm"
-              value={mode}
+              value={!isMarkdown && mode === "split" ? "write" : mode}
               onValueChange={(v) => {
                 if (v) setMode(v as ViewMode)
               }}
-              aria-label="Editor layout"
+              aria-label="Document mode"
             >
-              <ToggleGroupItem value="write" aria-label="Write">
-                <PenLine />
+              <ToggleGroupItem value="preview" aria-label="View" title="View">
+                <Eye /> <span className="hidden sm:inline">View</span>
               </ToggleGroupItem>
-              <ToggleGroupItem value="split" aria-label="Split view" className="hidden md:inline-flex">
-                <Columns2 />
+              <ToggleGroupItem value="write" aria-label="Edit" title="Edit">
+                <PenLine /> <span className="hidden sm:inline">Edit</span>
               </ToggleGroupItem>
-              <ToggleGroupItem value="preview" aria-label="Preview">
-                <Eye />
-              </ToggleGroupItem>
+              {isMarkdown ? (
+                <ToggleGroupItem value="split" aria-label="Edit with live preview" title="Edit with live preview" className="hidden md:inline-flex">
+                  <Columns2 />
+                </ToggleGroupItem>
+              ) : null}
             </ToggleGroup>
           ) : null}
           <Button variant="outline" size="sm" onClick={() => setHistoryOpen(true)}>
@@ -564,7 +573,14 @@ function DocumentEditor({
         )}
       >
         {isEnv ? (
-          <EnvEditor key={epoch} value={content} onChange={setContent} readOnly={readOnly} fileName={name.trim() || "secrets.env"} />
+          <EnvEditor
+            key={epoch}
+            value={content}
+            onChange={setContent}
+            readOnly={viewing}
+            fileName={name.trim() || "secrets.env"}
+            onAudit={secure ? (event, count) => reportDocumentEvent(workspaceId, doc.id, { event, count, version: doc.version }) : undefined}
+          />
         ) : (
           <>
             {showEditor ? (
@@ -582,8 +598,8 @@ function DocumentEditor({
                 {content.trim() ? <MarkdownView source={content} /> : <p className="text-muted-foreground text-sm italic">Nothing to preview yet.</p>}
               </div>
             ) : null}
-            {readOnly && !isMarkdown ? (
-              <pre className="min-h-[60vh] p-5 font-mono text-[0.9rem] leading-7 break-words whitespace-pre-wrap">{content}</pre>
+            {viewing && !isMarkdown ? (
+              <pre className="min-h-[60vh] p-5 font-mono text-[0.9rem] leading-7 break-words whitespace-pre-wrap">{content || <span className="text-muted-foreground font-sans text-sm italic">This document is empty.</span>}</pre>
             ) : null}
           </>
         )}

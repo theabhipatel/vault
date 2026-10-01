@@ -1,12 +1,13 @@
 import { useState } from "react"
 import { useInfiniteQuery } from "@tanstack/react-query"
-import { Download, FilterX, ScrollText } from "lucide-react"
+import { Download, FilterX, MonitorSmartphone, ScrollText } from "lucide-react"
 
+import { AuditEventSheet, ResultBadge } from "@/components/audit-event-sheet"
+import type { AuditEvent } from "@/components/audit-event-sheet"
 import { useBreadcrumbs } from "@/components/layout/breadcrumbs"
 import { useWorkspaceScope } from "@/components/layout/workspace-context"
 import { Page, PageHeader } from "@/components/page"
 import { EmptyState, ErrorState, ListSkeleton } from "@/components/states"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Field, FieldLabel } from "@/components/ui/field"
@@ -28,6 +29,7 @@ const ANY = "__any__"
 export function AuditPage() {
   const { id, workspace, can } = useWorkspaceScope()
   const [filters, setFilters] = useState<AuditFilters>({})
+  const [selected, setSelected] = useState<AuditEvent | null>(null)
   const members = useMembers(id)
   const projects = useProjects(id)
   useBreadcrumbs([{ label: workspace.name, to: `/w/${id}` }, { label: "Audit log" }])
@@ -72,7 +74,7 @@ export function AuditPage() {
     <Page wide>
       <PageHeader
         title="Audit log"
-        description="An append-only record of sign-ins, membership, permission, project and document activity. It never contains secret content."
+        description="An append-only record of sign-ins, vault, membership, permission, project and document activity. It never contains secret content. Select an event to see everything recorded about it."
         actions={
           <Button variant="outline" asChild>
             <a href={exportUrl} download>
@@ -167,7 +169,7 @@ export function AuditPage() {
             </TableHeader>
             <TableBody>
               {rows.map((r) => (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className="cursor-pointer" onClick={() => setSelected(r)}>
                   <TableCell className="text-muted-foreground pl-4 text-xs whitespace-nowrap" title={fullDate(r.created_at)}>
                     {shortDate(r.created_at)}
                   </TableCell>
@@ -175,7 +177,19 @@ export function AuditPage() {
                     <p className="truncate text-sm font-medium">{r.actor_name ?? "Unknown"}</p>
                     <p className="text-muted-foreground truncate text-xs">{r.actor_email}</p>
                   </TableCell>
-                  <TableCell className="text-sm whitespace-nowrap">{actionLabel(r.action)}</TableCell>
+                  <TableCell className="text-sm whitespace-nowrap">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-sm text-left hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelected(r)
+                      }}
+                    >
+                      {actionLabel(r.action)}
+                      {r.details?.source === "browser" ? <MonitorSmartphone className="text-muted-foreground size-3.5" aria-label="Reported by the browser" /> : null}
+                    </button>
+                  </TableCell>
                   <TableCell className="max-w-56 truncate text-sm">{r.target_label ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground hidden max-w-40 truncate text-xs lg:table-cell">{r.project_name ?? "—"}</TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -188,7 +202,7 @@ export function AuditPage() {
                     </Tooltip>
                   </TableCell>
                   <TableCell className="pr-4">
-                    <Badge variant={r.result === "success" ? "success" : "destructive"}>{r.result}</Badge>
+                    <ResultBadge result={r.result} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -203,6 +217,7 @@ export function AuditPage() {
           ) : null}
         </Card>
       )}
+      <AuditEventSheet event={selected} onOpenChange={(open) => !open && setSelected(null)} />
     </Page>
   )
 }

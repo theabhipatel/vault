@@ -5,14 +5,16 @@ which opaque blob, and keep operations atomic so a project is never left half re
 """
 
 import uuid
+from datetime import timedelta
 
 from fastapi import APIRouter, HTTPException, status
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from vault_api.db import utcnow
 from vault_api.deps import DB, CurrentAuth, Meta, WsCtx
 from vault_api.models import (
+    AuditLog,
     Document,
     DocumentVersion,
     Membership,
@@ -36,7 +38,9 @@ from vault_api.schemas.vault import (
     RotationItem,
     RotationMaterial,
     SecureDocumentCreate,
+    SecureDocumentEventIn,
     SecureDocumentUpdate,
+    VaultEventIn,
     VaultKeysIn,
     VaultOut,
     VaultPasswordIn,
@@ -45,6 +49,7 @@ from vault_api.schemas.vault import (
     VaultResetIn,
     VaultSummary,
 )
+from vault_api.security import ratelimit
 from vault_api.services import audit, email, notifications, vault
 from vault_api.services.access import get_project, secure_access_snapshot
 
@@ -700,3 +705,133 @@ async def save_secure_document(
     )
     await db.commit()
     return await _document_out(ctx, db, doc, project)
+
+
+# ---- Browser-reported audit events ---------------------------------------------------------
+# Unlocking and decrypting happen only in the browser, so the browser reports them. These
+# entries are marked `source: browser`: a modified client could skip them, so they complement
+# the server-side records (ciphertext fetches, saves, grants) rather than replace them. Brute
+# force protection comes from Argon2id, not from these reports.
+
+UNLOCK_ALERT_THRESHOLD = 5
+VAULT_EVENT_FIELDS = {
+    "unlock_failed": ("method", "context", "attempt"),
+    "unlocked": ("method", "attempt"),
+    "locked": ("reason",),
+}
+
+
+@router.post("/vault/events", status_code=status.HTTP_204_NO_CONTENT)
+async def report_vault_event(body: VaultEventIn, auth: CurrentAuth, db: DB, meta: Meta) -> None:
+    await ratelimit.hit(f"vault-event:{auth.user.id}", 120, timedelta(minutes=10))
+    await _my_vault(db, auth.user)
+    details: dict[str, object] = {"source": "browser"}
+    for field in VAULT_EVENT_FIELDS[body.event]:
+        value = getattr(body, field)
+        if value is not None:
+            details[field] = value
+    failed = body.event == "unlock_failed"
+    if failed:
+        recent = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.actor_id == auth.user.id,
+                AuditLog.action == "vault.unlock_failed",
+                AuditLog.created_at >= utcnow() - timedelta(hours=1),
+            )
+        )
+        details["failures_last_hour"] = (recent or 0) + 1
+    audit.record(
+        db,
+        action=f"vault.{body.event}",
+        actor=auth.user,
+        meta=meta,
+        result="failure" if failed else "success",
+        details=details,
+    )
+    if failed and details["failures_last_hour"] == UNLOCK_ALERT_THRESHOLD:
+        email.send_vault_event(db, auth.user.email, "unlock_failures")
+        notifications.notify(
+            db,
+            user_id=auth.user.id,
+            type="vault.unlock_failures",
+            title=f"Wrong vault password entered {UNLOCK_ALERT_THRESHOLD} times",
+            body="This happened within the last hour. If it wasn't you, change your login "
+            "password and sign out your other devices.",
+            link="/settings/security",
+        )
+    await db.commit()
+
+
+@router.post(
+    "/workspaces/{workspace_id}/documents/{document_id}/secure-events",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def report_secure_document_event(
+    document_id: uuid.UUID, body: SecureDocumentEventIn, ctx: WsCtx, db: DB, meta: Meta
+) -> None:
+    await ratelimit.hit(f"secure-doc-event:{ctx.user.id}", 300, timedelta(minutes=10))
+    doc, project = await _load(ctx, db, document_id)
+    if doc.kind != "secure":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Not a secure document.")
+    version = body.version or doc.version
+    if not 1 <= version <= doc.version:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unknown version.")
+    key_version = (
+        doc.key_version
+        if version == doc.version
+        else await db.scalar(
+            select(DocumentVersion.key_version).where(
+                DocumentVersion.document_id == doc.id, DocumentVersion.version == version
+            )
+        )
+    )
+    details: dict[str, object] = {
+        "source": "browser",
+        "version": version,
+        "current_version": doc.version,
+        "key_version": key_version,
+        "format": doc.format,
+    }
+    if body.count is not None:
+        details["count"] = body.count
+    failed = body.event == "decrypt_failed"
+    if failed:
+        details["reason"] = "integrity_check_failed"
+        alerted_recently = await db.scalar(
+            select(func.count())
+            .select_from(AuditLog)
+            .where(
+                AuditLog.action == "secure_document.decrypt_failed",
+                AuditLog.target_id == str(doc.id),
+                AuditLog.created_at >= utcnow() - timedelta(hours=1),
+            )
+        )
+        if not alerted_recently:
+            # Ciphertext that fails authentication may have been tampered with on the server.
+            for admin_id in await notifications.workspace_admin_ids(db, ctx.workspace.id):
+                notifications.notify(
+                    db,
+                    user_id=admin_id,
+                    workspace_id=ctx.workspace.id,
+                    type="secure_document.decrypt_failed",
+                    title=f"{doc.name} failed its integrity check",
+                    body=f"{ctx.user.name}'s browser couldn't decrypt version {version}. The "
+                    "stored data may have been modified. Review the audit log.",
+                    link=f"/w/{ctx.workspace.id}/audit",
+                )
+    audit.record(
+        db,
+        action=f"secure_document.{body.event}",
+        actor=ctx.user,
+        meta=meta,
+        workspace_id=ctx.workspace.id,
+        project_id=project.id,
+        target_type="document",
+        target_id=doc.id,
+        target_label=doc.name,
+        result="failure" if failed else "success",
+        details=details,
+    )
+    await db.commit()

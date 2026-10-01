@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { Outlet, useLocation } from "react-router"
 
-import { pageMeta } from "./seo"
+import { SITE_URL } from "./config"
+import { pageKeywords, pageMeta } from "./seo"
 
 /** Whether a session cookie is present (checked in the browser only, after the page is shown). */
 const SignedInContext = createContext(false)
@@ -37,6 +38,14 @@ export function SiteRoot() {
     setMeta('meta[name="description"]', "content", meta.description)
     setMeta('meta[property="og:title"]', "content", meta.title)
     setMeta('meta[property="og:description"]', "content", meta.description)
+    setMeta('meta[name="twitter:title"]', "content", meta.title)
+    setMeta('meta[name="twitter:description"]', "content", meta.description)
+    setMeta('meta[name="keywords"]', "content", pageKeywords(meta))
+    if (SITE_URL) {
+      const url = `${SITE_URL}${meta.path === "/" ? "/" : meta.path}`
+      setMeta('link[rel="canonical"]', "href", url)
+      setMeta('meta[property="og:url"]', "content", url)
+    }
   }, [location.pathname])
 
   // New page: start at the top, or at the linked heading.

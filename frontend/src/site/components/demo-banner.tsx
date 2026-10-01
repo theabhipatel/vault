@@ -86,11 +86,11 @@ export function DemoBanner() {
       onFocus={() => setPaused(true)}
       onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setPaused(false)}
     >
-      {/* Inverted colours (light card on the dark theme, dark card on the light theme) so it
-          stands out clearly from the page behind it. */}
+      {/* Always dark (the `dark` class switches the theme tokens), on the teal gradient of the logo
+          tile, with a deep black shadow so it lifts clearly off the page in both themes. */}
       <div
         className={
-          "site-toast bg-foreground text-background ring-background/10 relative overflow-hidden rounded-2xl shadow-[0_24px_60px_-18px_rgb(0_0_0/0.6)] ring-1" +
+          "site-toast dark relative overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#1d5051_0%,#133437_42%,#0b1517_100%)] text-white shadow-[0_22px_50px_-10px_rgb(0_0_0/0.75),0_8px_18px_-6px_rgb(0_0_0/0.5)] ring-1 ring-white/10" +
           (phase === "leaving" ? " site-toast-out" : "")
         }
       >
@@ -99,23 +99,23 @@ export function DemoBanner() {
             <FlaskConical className="size-5" />
             <span aria-hidden className="absolute -top-1 -right-1 flex size-3">
               <span className="bg-secure absolute inline-flex size-full animate-ping rounded-full opacity-70" />
-              <span className="bg-secure ring-foreground relative inline-flex size-3 rounded-full ring-2" />
+              <span className="bg-secure relative inline-flex size-3 rounded-full ring-2 ring-[#173b3d]" />
             </span>
           </span>
 
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold tracking-tight">You're exploring the live demo</p>
-            <p className="text-background/70 mt-0.5 text-xs leading-relaxed">
+            <p className="mt-0.5 text-xs leading-relaxed text-white/70">
               Anyone can sign up and data may be reset. Keep real secrets on your own server.
             </p>
-            <a href="/docs/self-hosting" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold underline underline-offset-2 sm:hidden">
+            <a href="/docs/self-hosting" className="text-brand mt-2 inline-flex items-center gap-1 text-xs font-semibold sm:hidden">
               Self-host it <ArrowUpRight className="size-3.5" />
             </a>
           </div>
 
           <a
             href="/docs/self-hosting"
-            className="bg-background text-foreground hidden h-8 shrink-0 items-center gap-1 rounded-lg px-3 text-xs font-semibold transition-opacity hover:opacity-85 sm:inline-flex"
+            className="bg-brand text-brand-foreground hidden h-8 shrink-0 items-center gap-1 rounded-lg px-3 text-xs font-semibold shadow-sm transition-opacity hover:opacity-90 sm:inline-flex"
           >
             Self-host <ArrowUpRight className="size-3.5" />
           </a>
@@ -125,15 +125,15 @@ export function DemoBanner() {
           type="button"
           onClick={close}
           aria-label="Dismiss demo notice"
-          className="text-background/60 hover:bg-background/10 hover:text-background focus-visible:ring-background/40 absolute top-2.5 right-2.5 grid size-7 place-items-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none sm:top-1/2 sm:-translate-y-1/2"
+          className="absolute top-2.5 right-2.5 grid size-7 place-items-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none sm:top-1/2 sm:-translate-y-1/2"
         >
           <X className="size-4" />
         </button>
 
         {/* Countdown to auto-hide; pauses together with the timer. Hidden for reduced motion. */}
-        <div aria-hidden className="bg-background/10 absolute inset-x-0 bottom-0 h-1 motion-reduce:hidden">
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-white/10 motion-reduce:hidden">
           <div
-            className="site-toast-progress bg-secure h-full origin-left"
+            className="site-toast-progress bg-brand h-full origin-left"
             style={{ animationPlayState: paused || phase === "leaving" ? "paused" : "running" }}
           />
         </div>

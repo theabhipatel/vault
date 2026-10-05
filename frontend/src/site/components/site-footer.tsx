@@ -3,7 +3,7 @@ import { Link } from "react-router"
 
 import { LogoMark } from "@/components/brand"
 
-import { APP_URL, GITHUB_URL, SIGNUP_URL } from "../config"
+import { APP_URL, AUTHOR, GITHUB_URL, SIGNUP_URL } from "../config"
 import { DevelopedBy } from "./developed-by"
 import { GitHubIcon } from "./github-icon"
 
@@ -188,7 +188,11 @@ export function SiteFooter() {
 
         <div className="flex flex-col-reverse items-start justify-between gap-6 border-t py-8 sm:flex-row sm:items-center">
           <p className="text-muted-foreground text-xs">
-            © {new Date().getFullYear()} Secure Vault. Open source. Encrypted in your browser, stored as ciphertext.
+            © {new Date().getFullYear()} Secure Vault by{" "}
+            <a href={AUTHOR.url} target="_blank" rel="noopener author" className="hover:text-foreground underline-offset-4 hover:underline">
+              {AUTHOR.name} ({AUTHOR.fullName})
+            </a>
+            . Open source. Encrypted in your browser, stored as ciphertext.
           </p>
           <DevelopedBy />
         </div>

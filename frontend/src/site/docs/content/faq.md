@@ -6,6 +6,10 @@ Quick answers to the questions people ask most often, and fixes for common probl
 
 A **normal document** is protected by access control. The server stores it readable, so it suits runbooks, notes and guides. A **secure document** is end-to-end encrypted in your browser before it's saved. The server only ever stores ciphertext, so it suits passwords, API keys and `.env` files. You choose the type when you create a document and can't change it later. See [Documents](/docs/documents) and [Secure documents](/docs/secure-documents).
 
+### Who built Secure Vault?
+
+Secure Vault is designed and developed by [TheAbhiPatel](https://www.theabhipatel.com/) (Abhishek Patel), a full stack developer and DevOps engineer. The source code is on [GitHub](https://github.com/theabhipatel/vault), and more projects are on the [TheAbhiPatel portfolio](https://www.theabhipatel.com/).
+
 ### Is there a hosted version, or do I have to self-host?
 
 Secure Vault is self-hosted software: you or your organisation run the server. See [Self-hosting](/docs/self-hosting) and [Production](/docs/production). If you try an instance someone else runs, for example a public demo, remember that its operator controls the server and the app it serves. Don't store real secrets on a server you don't trust.

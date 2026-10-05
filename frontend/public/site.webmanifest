@@ -1,7 +1,7 @@
 {
   "name": "Secure Vault",
   "short_name": "Secure Vault",
-  "description": "End-to-end encrypted secrets and docs for teams.",
+  "description": "Secure Vault by TheAbhiPatel: end-to-end encrypted secrets and docs for teams.",
   "start_url": "/app",
   "display": "standalone",
   "background_color": "#121719",

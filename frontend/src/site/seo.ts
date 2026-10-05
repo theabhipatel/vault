@@ -1,6 +1,6 @@
 /** Per-page titles and meta tags, rendered into the pre-built HTML and kept in sync in the browser. */
 import { ALL_DOCS, findDoc } from "./docs/catalog"
-import { AUTHOR, GITHUB_URL, SITE_NAME, SITE_URL } from "./config"
+import { AUTHOR, GITHUB_URL, GOOGLE_SITE_VERIFICATION, SITE_NAME, SITE_URL } from "./config"
 
 export interface PageMeta {
   title: string
@@ -13,15 +13,23 @@ export interface PageMeta {
   section?: string
 }
 
-const HOME_DESCRIPTION =
-  "Secure Vault is an open-source, self-hosted team vault by TheAbhiPatel. Keep docs and .env secrets in one place, with secrets end-to-end encrypted in the browser so the server never sees them."
+/** "Secure Vault by TheAbhiPatel": the name people search for, used in titles and descriptions. */
+const BRANDED_NAME = `${SITE_NAME} by ${AUTHOR.name}`
+
+const HOME_DESCRIPTION = `${BRANDED_NAME} (${AUTHOR.fullName}) is an open-source, self-hosted team vault. Keep docs and .env secrets in one place, end-to-end encrypted in your browser so the server never sees them.`
 
 /** Keywords on every public page, including the author's name. */
 const SITE_KEYWORDS = [
   SITE_NAME,
+  BRANDED_NAME,
+  "Secure Vault TheAbhiPatel",
+  "vault theabhipatel",
+  "secure vault the abhi patel",
   "TheAbhiPatel",
   "theabhipatel",
+  "The Abhi Patel",
   "Abhi Patel",
+  "Abhishek Patel",
   "end-to-end encryption",
   "E2EE",
   "secrets management",
@@ -33,13 +41,15 @@ const SITE_KEYWORDS = [
   "zero-knowledge",
 ]
 
-const OG_IMAGE_ALT = `${SITE_NAME}: end-to-end encrypted secrets and docs for teams, by TheAbhiPatel`
+const OG_IMAGE_ALT = `${BRANDED_NAME}: end-to-end encrypted secrets and docs for teams`
+/** Bump when og-image.png changes, so social networks fetch the new image instead of a cached one. */
+const OG_IMAGE_PATH = "/og-image.png?v=2"
 
 export function pageMeta(pathname: string): PageMeta {
   const path = pathname.replace(/\/+$/, "") || "/"
   if (path === "/") {
     return {
-      title: `${SITE_NAME} | End-to-end encrypted secrets and docs for teams`,
+      title: `${BRANDED_NAME} | End-to-end encrypted secrets and docs`,
       description: HOME_DESCRIPTION,
       path,
       type: "website",
@@ -48,9 +58,8 @@ export function pageMeta(pathname: string): PageMeta {
   }
   if (path === "/docs") {
     return {
-      title: `Documentation | ${SITE_NAME}`,
-      description:
-        "Secure Vault documentation by TheAbhiPatel: self-host it, manage workspaces and roles, and keep secrets end-to-end encrypted.",
+      title: `Documentation | ${BRANDED_NAME}`,
+      description: `${BRANDED_NAME} documentation: self-host it, manage workspaces and roles, and keep secrets end-to-end encrypted.`,
       path,
       type: "website",
       keywords: ["Secure Vault docs", "documentation", "self-hosting guide"],
@@ -71,7 +80,7 @@ export function pageMeta(pathname: string): PageMeta {
   }
   if (path === "/privacy") {
     return {
-      title: `Privacy and demo terms | ${SITE_NAME}`,
+      title: `Privacy and demo terms | ${BRANDED_NAME}`,
       description: "What the public Secure Vault demo stores, how long, and why real secrets belong on your own server.",
       path,
       type: "website",
@@ -89,7 +98,7 @@ const escapeHtml = (value: string) =>
 /** The <head> tags for a page (static HTML; no inline scripts, which the CSP forbids). */
 export function renderHead(meta: PageMeta): string {
   const url = SITE_URL ? `${SITE_URL}${meta.path === "/" ? "/" : meta.path}` : ""
-  const image = SITE_URL ? `${SITE_URL}/og-image.png` : ""
+  const image = SITE_URL ? `${SITE_URL}${OG_IMAGE_PATH}` : ""
   const robots = "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
   const tags = [
     `<title>${escapeHtml(meta.title)}</title>`,
@@ -113,9 +122,14 @@ export function renderHead(meta: PageMeta): string {
     `<meta property="og:description" content="${escapeHtml(meta.description)}" />`,
     // X / Twitter
     `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:site" content="${AUTHOR.xHandle}" />`,
+    `<meta name="twitter:creator" content="${AUTHOR.xHandle}" />`,
     `<meta name="twitter:title" content="${escapeHtml(meta.title)}" />`,
     `<meta name="twitter:description" content="${escapeHtml(meta.description)}" />`,
   ]
+  if (GOOGLE_SITE_VERIFICATION) {
+    tags.push(`<meta name="google-site-verification" content="${escapeHtml(GOOGLE_SITE_VERIFICATION)}" />`)
+  }
   if (meta.type === "article") {
     tags.push(`<meta property="article:author" content="${AUTHOR.url}" />`)
     if (meta.section) tags.push(`<meta property="article:section" content="${escapeHtml(meta.section)}" />`)
@@ -126,6 +140,7 @@ export function renderHead(meta: PageMeta): string {
   if (image) {
     tags.push(
       `<meta property="og:image" content="${image}" />`,
+      `<meta property="og:image:secure_url" content="${image}" />`,
       `<meta property="og:image:type" content="image/png" />`,
       `<meta property="og:image:width" content="1200" />`,
       `<meta property="og:image:height" content="630" />`,
@@ -149,8 +164,11 @@ const PERSON = {
   "@id": absolute("/#author"),
   name: AUTHOR.name,
   alternateName: [...AUTHOR.alternateNames],
+  givenName: "Abhishek",
+  familyName: "Patel",
+  jobTitle: AUTHOR.jobTitle,
   url: AUTHOR.url,
-  sameAs: [AUTHOR.github, AUTHOR.url],
+  sameAs: [AUTHOR.url, AUTHOR.github, AUTHOR.linkedin, AUTHOR.x, AUTHOR.leetcode],
 }
 const PERSON_REF = { "@id": PERSON["@id"] }
 
@@ -158,6 +176,7 @@ const WEBSITE = {
   "@type": "WebSite",
   "@id": absolute("/#website"),
   name: SITE_NAME,
+  alternateName: [BRANDED_NAME, `${AUTHOR.name} Secure Vault`, `Vault by ${AUTHOR.name}`],
   url: absolute("/"),
   description: HOME_DESCRIPTION,
   inLanguage: "en",
@@ -173,11 +192,12 @@ export function structuredData(meta: PageMeta): string {
       "@type": "SoftwareApplication",
       "@id": absolute("/#software"),
       name: SITE_NAME,
+      alternateName: BRANDED_NAME,
       applicationCategory: "SecurityApplication",
       operatingSystem: "Web, Linux, macOS, Windows (self-hosted)",
       description: meta.description,
       url: absolute("/"),
-      ...(SITE_URL ? { image: absolute("/og-image.png") } : {}),
+      ...(SITE_URL ? { image: absolute(OG_IMAGE_PATH), screenshot: absolute(OG_IMAGE_PATH) } : {}),
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       author: PERSON_REF,
       creator: PERSON_REF,

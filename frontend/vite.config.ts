@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import type { Plugin } from 'vite'
 
 // Where the FastAPI backend listens in development (see .env.example).
@@ -71,6 +71,34 @@ function subresourceIntegrity(): Plugin {
   }
 }
 
+/**
+ * Link previews for app pages (/login, /signup, invite links...). They stay noindex, but a shared link
+ * should still show the title and image. Open Graph needs absolute URLs, so this needs VITE_SITE_URL.
+ */
+function appShellSocialTags(siteUrl: string): Plugin {
+  const title = 'Secure Vault by TheAbhiPatel'
+  const description = "End-to-end encrypted secrets and docs for teams. Open source and self-hosted, by TheAbhiPatel."
+  const image = `${siteUrl}/og-image.png?v=2`
+  const tags = [
+    `<meta property="og:site_name" content="Secure Vault" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:title" content="${title}" />`,
+    `<meta property="og:description" content="${description}" />`,
+    `<meta property="og:image" content="${image}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:creator" content="@itheabhipatel" />`,
+    `<meta name="twitter:title" content="${title}" />`,
+    `<meta name="twitter:description" content="${description}" />`,
+    `<meta name="twitter:image" content="${image}" />`,
+  ].join('\n    ')
+  return {
+    name: 'vault-app-shell-social-tags',
+    transformIndexHtml: (html) => html.replace('<!--app-social-->', siteUrl ? tags : ''),
+  }
+}
+
 /** Public site pages (landing, docs, privacy). Everything else is the app. */
 const isSitePath = (pathname: string) =>
   pathname === '/' || pathname === '/docs' || pathname.startsWith('/docs/') || pathname === '/privacy'
@@ -106,8 +134,14 @@ function sitePages(): Plugin {
 }
 
 // https://vite.dev/config/
-export default defineConfig(({ isSsrBuild }) => ({
-  plugins: [react(), tailwindcss(), sitePages(), subresourceIntegrity()],
+export default defineConfig(({ isSsrBuild, mode }) => ({
+  plugins: [
+    react(),
+    tailwindcss(),
+    sitePages(),
+    appShellSocialTags(String(loadEnv(mode, import.meta.dirname, 'VITE_').VITE_SITE_URL ?? '').replace(/\/+$/, '')),
+    subresourceIntegrity(),
+  ],
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },

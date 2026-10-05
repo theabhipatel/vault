@@ -6,9 +6,11 @@
 
 **Your team's docs and secrets in one place, with secrets end-to-end encrypted in the browser.**
 
+Built by [TheAbhiPatel](https://www.theabhipatel.com/)
+
 Self-hosted · Multi-workspace · Roles and permissions · Audit log · Free
 
-[Live demo](https://secure-vault-navy-delta.vercel.app) · [Documentation](https://secure-vault-navy-delta.vercel.app/docs) · [Self-hosting guide](https://secure-vault-navy-delta.vercel.app/docs/self-hosting)
+[Live demo](https://vault.theabhipatel.com) · [Documentation](https://vault.theabhipatel.com/docs) · [Self-hosting guide](https://vault.theabhipatel.com/docs/self-hosting)
 
 </div>
 
@@ -48,7 +50,7 @@ plaintext secret. Even someone who steals the whole database gets nothing readab
 
 ## Try the demo
 
-Open the **[live demo](https://secure-vault-navy-delta.vercel.app)**, create an account and look around.
+Open the **[live demo](https://vault.theabhipatel.com)**, create an account and look around.
 
 > **The demo is for trying things out only.** Anyone can sign up, data may be wiped at any time, and
 > you don't control the server. **Never store real secrets there.** For real use, self-host it
@@ -178,9 +180,9 @@ This runs three containers:
 
 Put HTTPS in front of port 29080, for example with Caddy, Traefik or your load balancer.
 
-The full guide, covering HTTPS, backups and updates, is the [production deployment docs](https://secure-vault-navy-delta.vercel.app/docs/production).
+The full guide, covering HTTPS, backups and updates, is the [production deployment docs](https://vault.theabhipatel.com/docs/production).
 Every setting is listed in [backend/.env.example](backend/.env.example) and in the
-[configuration reference](https://secure-vault-navy-delta.vercel.app/docs/configuration).
+[configuration reference](https://vault.theabhipatel.com/docs/configuration).
 
 ---
 
@@ -238,7 +240,7 @@ All of these settings are **off by default**, so self-hosted installs behave exa
 - the database sleeps when idle, so the first request after a pause is slower;
 - the cleanup runs once a day.
 
-The full guide is the [Deploy a demo on Vercel docs](https://secure-vault-navy-delta.vercel.app/docs/vercel-demo).
+The full guide is the [Deploy a demo on Vercel docs](https://vault.theabhipatel.com/docs/vercel-demo).
 
 ---
 
@@ -570,7 +572,7 @@ own. The server enforces these rules on every request:
 
 <div align="center">
 
-Developed by **[TheAbhiPatel](https://www.theabhipatel.com/)** · [GitHub](https://github.com/theabhipatel)
+Developed by **[TheAbhiPatel](https://www.theabhipatel.com/)** (Abhishek Patel) · [Portfolio](https://www.theabhipatel.com/) · [GitHub](https://github.com/theabhipatel) · [LinkedIn](https://www.linkedin.com/in/theabhipatel) · [X](https://x.com/itheabhipatel)
 
 If Secure Vault is useful to you, please **[give it a star on GitHub](https://github.com/theabhipatel/vault)**.
 

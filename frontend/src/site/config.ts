@@ -7,10 +7,19 @@ export const GITHUB_DOCS_EDIT_URL = `${GITHUB_URL}/edit/master/frontend/src/site
 /** The author, credited in the meta tags and structured data of every public page. */
 export const AUTHOR = {
   name: "TheAbhiPatel",
-  alternateNames: ["Abhi Patel", "Abhishek Patel", "theabhipatel"],
+  fullName: "Abhishek Patel",
+  alternateNames: ["Abhishek Patel", "Abhi Patel", "The Abhi Patel", "theabhipatel"],
+  jobTitle: "Full Stack Developer & DevOps Engineer",
   url: "https://www.theabhipatel.com/",
   github: "https://github.com/theabhipatel",
+  linkedin: "https://www.linkedin.com/in/theabhipatel",
+  x: "https://x.com/itheabhipatel",
+  xHandle: "@itheabhipatel",
+  leetcode: "https://leetcode.com/u/theabhipatel",
 } as const
+
+/** Google Search Console HTML-tag verification token (the content="..." value), if any. */
+export const GOOGLE_SITE_VERIFICATION = String(import.meta.env.VITE_GOOGLE_SITE_VERIFICATION ?? "").trim()
 
 /** Absolute public origin (e.g. https://securevault.example.com). Used for canonical and Open Graph URLs. */
 export const SITE_URL = String(import.meta.env.VITE_SITE_URL ?? "").replace(/\/+$/, "")

@@ -16,7 +16,7 @@ This page is about the login password. For the vault password, see [Vault setup]
 
 ## Create an account
 
-1. Open the sign-up page and fill in **Full name**, **Work email** and **Login password** (at least 10 characters, and not your email address). A strength meter shows how strong the password is.
+1. Open the sign-up page and fill in **Full name**, **Work email** and **Login password** (at least 8 characters, and not your email address). A strength meter shows how strong the password is.
 2. Select **Create account**.
 3. On the **Check your email** page, open the verification email and select **Verify email**. The link expires after 48 hours.
 4. The link signs you in and takes you to onboarding, where you name your first workspace. See [Workspaces](/docs/workspaces).

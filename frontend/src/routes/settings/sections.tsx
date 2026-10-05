@@ -19,6 +19,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { ConfirmDialog } from "@/components/confirm-dialog"
+import { PasswordInput } from "@/components/password-input"
 import { PasswordStrength } from "@/components/password-strength"
 import { ErrorState, ListSkeleton } from "@/components/states"
 import { UserAvatar } from "@/components/user-avatar"
@@ -217,7 +218,7 @@ export function AppearanceSection() {
 const passwordSchema = z
   .object({
     current: z.string(),
-    next: z.string().min(10, "Use at least 10 characters.").max(256),
+    next: z.string().min(8, "Use at least 8 characters.").max(256),
     confirm: z.string(),
   })
   .refine((v) => v.next === v.confirm, { message: "The passwords don't match.", path: ["confirm"] })
@@ -275,17 +276,17 @@ function PasswordCard({ me }: { me: Me }) {
           <FieldGroup className="max-w-md">
             <Field>
               <FieldLabel htmlFor="pw-current">Current password</FieldLabel>
-              <Input id="pw-current" type="password" autoComplete="current-password" {...form.register("current")} />
+              <PasswordInput id="pw-current" autoComplete="current-password" {...form.register("current")} />
             </Field>
             <Field data-invalid={Boolean(errors.next)}>
               <FieldLabel htmlFor="pw-next">New password</FieldLabel>
-              <Input id="pw-next" type="password" autoComplete="new-password" {...form.register("next")} />
+              <PasswordInput id="pw-next" autoComplete="new-password" {...form.register("next")} />
               <PasswordStrength password={form.watch("next")} userInputs={[me.email, me.name]} />
               <FieldError errors={[errors.next]} />
             </Field>
             <Field data-invalid={Boolean(errors.confirm)}>
               <FieldLabel htmlFor="pw-confirm">Confirm new password</FieldLabel>
-              <Input id="pw-confirm" type="password" autoComplete="new-password" {...form.register("confirm")} />
+              <PasswordInput id="pw-confirm" autoComplete="new-password" {...form.register("confirm")} />
               <FieldError errors={[errors.confirm]} />
             </Field>
             <Button type="submit" className="w-fit" disabled={change.isPending}>
@@ -485,7 +486,7 @@ export function AccountSection() {
         {me.has_password ? (
           <Field>
             <FieldLabel htmlFor="delete-password">Your password</FieldLabel>
-            <Input id="delete-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput id="delete-password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
         ) : null}
       </ConfirmDialog>

@@ -4,6 +4,7 @@ import { KeyRound, Lock, LockOpen, RefreshCw, RotateCcw, ShieldAlert, ShieldChec
 import { useSearchParams } from "react-router"
 import { toast } from "sonner"
 
+import { PasswordInput } from "@/components/password-input"
 import { Fingerprint } from "@/components/vault/fingerprint"
 import { RecoveryKeyPanel } from "@/components/vault/recovery-key-panel"
 import { useNewVaultPassword } from "@/components/vault/vault-dialogs"
@@ -239,7 +240,7 @@ function ChangePasswordDialog({ userId, onClose }: { userId: string; onClose: ()
           <div className="space-y-5 py-5">
             <Field data-invalid={Boolean(error)}>
               <FieldLabel htmlFor="current-vault-password">Current vault password</FieldLabel>
-              <Input id="current-vault-password" type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus />
+              <PasswordInput id="current-vault-password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} autoFocus />
               {error ? <FieldError>{error}</FieldError> : null}
             </Field>
             {next.fields}

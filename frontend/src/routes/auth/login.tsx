@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { PasswordInput } from "@/components/password-input"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field"
@@ -103,7 +104,7 @@ export function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <Input id="password" type="password" autoComplete="current-password" aria-invalid={Boolean(form.formState.errors.password)} {...form.register("password")} />
+            <PasswordInput id="password" autoComplete="current-password" aria-invalid={Boolean(form.formState.errors.password)} {...form.register("password")} />
             <FieldError errors={[form.formState.errors.password]} />
           </Field>
           {submitError ? (

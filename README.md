@@ -408,7 +408,7 @@ server can't swap or replay blobs undetected:
   4. It uploads only public and encrypted material.
 
   The recovery key is shown once: grouped, with copy and download buttons and an "I have saved it"
-  confirmation. Minimum 12 characters and a strength check apply, with advice to use something
+  confirmation. Minimum 8 characters and a strength check apply, with advice to use something
   different from the login password.
 - **Unlock:**
   - The private key lives only in JavaScript memory as a byte array, overwritten on lock.

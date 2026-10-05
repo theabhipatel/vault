@@ -1,8 +1,9 @@
 import { useState } from "react"
-import { ArrowRight, Eye, EyeOff, KeyRound, Lock, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react"
+import { ArrowRight, KeyRound, Lock, ShieldAlert, ShieldCheck, Sparkles } from "lucide-react"
 import { Link } from "react-router"
 import { toast } from "sonner"
 
+import { PasswordInput } from "@/components/password-input"
 import { PasswordStrength, estimateStrength } from "@/components/password-strength"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field"
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group"
 import { Spinner } from "@/components/ui/spinner"
 import { useMe } from "@/hooks/api"
 import { errorMessage } from "@/lib/api"
@@ -27,29 +27,7 @@ import { useVault } from "@/vault/vault-context"
 import { Fingerprint } from "./fingerprint"
 import { RecoveryKeyPanel } from "./recovery-key-panel"
 
-export const VAULT_PASSWORD_MIN = 12
-
-function PasswordInput({ id, value, onChange, autoFocus, autoComplete }: { id: string; value: string; onChange: (v: string) => void; autoFocus?: boolean; autoComplete: string }) {
-  const [shown, setShown] = useState(false)
-  return (
-    <InputGroup>
-      <InputGroupInput
-        id={id}
-        type={shown ? "text" : "password"}
-        value={value}
-        autoComplete={autoComplete}
-        autoFocus={autoFocus}
-        spellCheck={false}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <InputGroupAddon align="inline-end">
-        <InputGroupButton size="icon-xs" aria-label={shown ? "Hide password" : "Show password"} onClick={() => setShown((v) => !v)}>
-          {shown ? <EyeOff /> : <Eye />}
-        </InputGroupButton>
-      </InputGroupAddon>
-    </InputGroup>
-  )
-}
+export const VAULT_PASSWORD_MIN = 8
 
 /** New vault password with confirmation and strength checks. Returns null until valid. */
 export function useNewVaultPassword(userInputs: string[]) {
@@ -71,7 +49,7 @@ export function useNewVaultPassword(userInputs: string[]) {
     <FieldGroup>
       <Field data-invalid={tooShort || weak}>
         <FieldLabel htmlFor="vault-password">Vault password</FieldLabel>
-        <PasswordInput id="vault-password" value={password} onChange={onPassword} autoFocus autoComplete="new-password" />
+        <PasswordInput id="vault-password" value={password} onChange={(e) => onPassword(e.target.value)} autoFocus autoComplete="new-password" />
         <PasswordStrength password={password} userInputs={userInputs} />
         <FieldDescription>
           At least {VAULT_PASSWORD_MIN} characters. Make it different from your login password. A few random words work well.
@@ -81,7 +59,7 @@ export function useNewVaultPassword(userInputs: string[]) {
       </Field>
       <Field data-invalid={mismatch}>
         <FieldLabel htmlFor="vault-password-confirm">Confirm vault password</FieldLabel>
-        <PasswordInput id="vault-password-confirm" value={confirm} onChange={setConfirm} autoComplete="new-password" />
+        <PasswordInput id="vault-password-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" />
         {mismatch ? <FieldError>The passwords don't match.</FieldError> : null}
       </Field>
     </FieldGroup>
@@ -147,7 +125,7 @@ export function UnlockVaultDialog({ open, onOpenChange }: { open: boolean; onOpe
           </DialogHeader>
           <Field className="py-5" data-invalid={Boolean(error)}>
             <FieldLabel htmlFor="unlock-password">Vault password</FieldLabel>
-            <PasswordInput id="unlock-password" value={password} onChange={setPassword} autoFocus autoComplete="current-password" />
+            <PasswordInput id="unlock-password" value={password} onChange={(e) => setPassword(e.target.value)} autoFocus autoComplete="current-password" />
             {error ? <FieldError>{error}</FieldError> : null}
             <FieldDescription>
               Forgot it?{" "}

@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { Link, useNavigate, useSearchParams } from "react-router"
 import { z } from "zod"
 
+import { PasswordInput } from "@/components/password-input"
 import { PasswordStrength } from "@/components/password-strength"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,7 @@ import { AuthHeading, AuthLayout, GoogleIcon } from "./layout"
 const schema = z.object({
   name: z.string().trim().min(1, "Tell us your name.").max(120),
   email: z.email("Enter a valid email address."),
-  password: z.string().min(10, "Use at least 10 characters.").max(256),
+  password: z.string().min(8, "Use at least 8 characters.").max(256),
 })
 type Values = z.infer<typeof schema>
 
@@ -70,10 +71,10 @@ export function SignupPage() {
           </Field>
           <Field data-invalid={Boolean(errors.password)}>
             <FieldLabel htmlFor="password">Login password</FieldLabel>
-            <Input id="password" type="password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} {...form.register("password")} />
+            <PasswordInput id="password" autoComplete="new-password" aria-invalid={Boolean(errors.password)} {...form.register("password")} />
             <PasswordStrength password={password} userInputs={[email, name]} />
             <FieldDescription>
-              At least 10 characters. This only signs you in. You will choose a separate vault password for encryption later.
+              At least 8 characters. This only signs you in. You will choose a separate vault password for encryption later.
             </FieldDescription>
             <FieldError errors={[errors.password]} />
           </Field>

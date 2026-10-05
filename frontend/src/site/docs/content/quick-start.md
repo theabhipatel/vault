@@ -10,7 +10,7 @@ You need one of these:
 ## 1. Create your account
 
 1. Open Secure Vault's home page and click **Get started** (on the public demo the button says **Try the demo**). This opens the sign-up page.
-2. Fill in **Full name**, **Work email** and **Login password** (at least 10 characters).
+2. Fill in **Full name**, **Work email** and **Login password** (at least 8 characters).
 3. Select **Create account**.
 
 If the server has Google sign-in turned on, you can select **Sign up with Google** instead. You skip the next step, because Google has already verified your email address.
@@ -37,7 +37,7 @@ A workspace holds your team's projects, documents and secrets. You become its ow
 Right after you create the workspace, Secure Vault asks you to set up your vault. Your vault holds the keys that encrypt secure documents. You can select **Skip for now**, but you need a vault before you can create or open a secure document.
 
 1. Select **Choose a vault password**.
-2. Enter a **Vault password** and repeat it in **Confirm vault password**. It must be at least 12 characters and hard to guess. Use something different from your login password.
+2. Enter a **Vault password** and repeat it in **Confirm vault password**. It must be at least 8 characters and hard to guess. Use something different from your login password.
 3. Select **Create my vault**. Your browser spends a few seconds tuning password hashing to your device and generating your keypair.
 4. On **Save your recovery key**, select **Copy** or **Download .txt** and store the key somewhere safe outside this browser, such as a password manager or a printed copy.
 5. Tick **I have saved my recovery key somewhere safe.** and select **Finish**.

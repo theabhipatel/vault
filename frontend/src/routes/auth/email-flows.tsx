@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearchParams } from "react-router"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { PasswordInput } from "@/components/password-input"
 import { PasswordStrength } from "@/components/password-strength"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -173,7 +174,7 @@ export function ForgotPasswordPage() {
 
 const resetSchema = z
   .object({
-    password: z.string().min(10, "Use at least 10 characters.").max(256),
+    password: z.string().min(8, "Use at least 8 characters.").max(256),
     confirm: z.string(),
   })
   .refine((v) => v.password === v.confirm, { message: "The passwords don't match.", path: ["confirm"] })
@@ -201,13 +202,13 @@ export function ResetPasswordPage() {
         <FieldGroup>
           <Field data-invalid={Boolean(errors.password)}>
             <FieldLabel htmlFor="password">New login password</FieldLabel>
-            <Input id="password" type="password" autoComplete="new-password" autoFocus {...form.register("password")} />
+            <PasswordInput id="password" autoComplete="new-password" autoFocus {...form.register("password")} />
             <PasswordStrength password={form.watch("password")} />
             <FieldError errors={[errors.password]} />
           </Field>
           <Field data-invalid={Boolean(errors.confirm)}>
             <FieldLabel htmlFor="confirm">Confirm password</FieldLabel>
-            <Input id="confirm" type="password" autoComplete="new-password" {...form.register("confirm")} />
+            <PasswordInput id="confirm" autoComplete="new-password" {...form.register("confirm")} />
             <FieldError errors={[errors.confirm]} />
           </Field>
           {reset.error || !token ? (

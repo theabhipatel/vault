@@ -33,7 +33,7 @@ Resetting or changing your login password never touches your vault. The setup sc
 
 The **Choose your vault password** form checks your password as you type:
 
-- **At least 12 characters.** Shorter passwords show **Use at least 12 characters.**
+- **At least 8 characters.** Shorter passwords show **Use at least 8 characters.**
 - **Hard to guess.** A strength meter rates the password as **Very weak**, **Weak**, **Fair**, **Strong** or **Very strong**. You need at least **Fair** to continue. Weaker passwords show **This password is too easy to guess.** The meter also penalises passwords built from your name or email address.
 - **Typed twice.** **Confirm vault password** must match exactly.
 

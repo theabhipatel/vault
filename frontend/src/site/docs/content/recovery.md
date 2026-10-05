@@ -18,7 +18,7 @@ Changing the password keeps your keypair. Only the wrapping around your private 
 1. Unlock your vault (see [Unlocking](/docs/unlocking)).
 2. Go to **Settings → Vault** and click **Change vault password**.
 3. Enter your **Current vault password**.
-4. Enter and confirm the new **Vault password**. The same rules apply as at setup: at least 12 characters and a strength rating of at least **Fair**. See [Set up your vault](/docs/vault-setup).
+4. Enter and confirm the new **Vault password**. The same rules apply as at setup: at least 8 characters and a strength rating of at least **Fair**. See [Set up your vault](/docs/vault-setup).
 5. Click **Change password**.
 
 Your browser checks your current password first. If it's wrong, you'll see **Your current vault password isn't right.** It then re-tunes the password hashing to your device, picks a new random salt, and re-encrypts your private key under the new password.

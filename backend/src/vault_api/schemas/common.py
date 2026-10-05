@@ -18,7 +18,7 @@ Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max
 WorkspaceName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)
 ]
-Password = Annotated[str, Field(min_length=10, max_length=256)]
+Password = Annotated[str, Field(min_length=8, max_length=256)]
 
 
 class EmailIn(APIModel):

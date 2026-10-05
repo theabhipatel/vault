@@ -146,6 +146,7 @@ function MembersTable({ members }: { members: Member[] }) {
   const [filter, setFilter] = useState("")
   const [removing, setRemoving] = useState<Member | null>(null)
   const [editingProjects, setEditingProjects] = useState<Member | null>(null)
+  const [roleChange, setRoleChange] = useState<{ member: Member; role: Role } | null>(null)
 
   const refresh = async () => {
     await Promise.all([
@@ -282,7 +283,7 @@ function MembersTable({ members }: { members: Member[] }) {
                                   value={m.role_id}
                                   onValueChange={(roleId) => {
                                     const role = assignable.find((r) => r.id === roleId)
-                                    if (role && role.id !== m.role_id) changeRole.mutate({ member: m, role })
+                                    if (role && role.id !== m.role_id) setRoleChange({ member: m, role })
                                   }}
                                 >
                                   {assignable.map((r) => (
@@ -334,6 +335,19 @@ function MembersTable({ members }: { members: Member[] }) {
         confirmLabel="Remove member"
         destructive
         onConfirm={() => (removing ? remove.mutateAsync(removing) : undefined)}
+      />
+      <ConfirmDialog
+        open={roleChange !== null}
+        onOpenChange={(o) => !o && setRoleChange(null)}
+        title={`Change ${roleChange?.member.name ?? ""}'s role?`}
+        description={
+          <p>
+            Their role changes from <span className="text-foreground font-medium">{roleChange?.member.role_name}</span> to{" "}
+            <span className="text-foreground font-medium">{roleChange?.role.name}</span>. What they can see and do changes right away.
+          </p>
+        }
+        confirmLabel="Change role"
+        onConfirm={() => (roleChange ? changeRole.mutateAsync(roleChange) : undefined)}
       />
       {editingProjects ? (
         <MemberProjectsDialog member={editingProjects} onClose={() => setEditingProjects(null)} onSaved={refresh} />

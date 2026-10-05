@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { BookOpen, LogOut, Monitor, Moon, Palette, ShieldCheck, Sun, UserRound } from "lucide-react"
 import { Link } from "react-router"
 
+import { SignOutDialog } from "@/components/sign-out-dialog"
 import { UserAvatar } from "@/components/user-avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useMe } from "@/hooks/api"
-import { useSetTheme, useSignOut } from "@/hooks/session"
+import { useSetTheme } from "@/hooks/session"
 import { useTheme } from "@/lib/theme"
 import type { ThemePreference } from "@/lib/types"
 
@@ -32,9 +34,10 @@ export function UserMenu() {
   const { data: me } = useMe()
   const { theme } = useTheme()
   const setTheme = useSetTheme()
-  const signOut = useSignOut()
+  const [signingOut, setSigningOut] = useState(false)
   if (!me) return null
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account menu">
@@ -82,10 +85,12 @@ export function UserMenu() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={() => signOut.mutate()}>
+        <DropdownMenuItem variant="destructive" onSelect={() => setSigningOut(true)}>
           <LogOut /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <SignOutDialog open={signingOut} onOpenChange={setSigningOut} />
+    </>
   )
 }

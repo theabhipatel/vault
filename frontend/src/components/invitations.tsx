@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Building2, Check, X } from "lucide-react"
+import { useState } from "react"
 import { useNavigate } from "react-router"
 import { toast } from "sonner"
 
+import { ConfirmDialog } from "@/components/confirm-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -53,6 +55,7 @@ export function useInvitationActions() {
 
 export function InvitationRow({ invitation }: { invitation: MyInvitation }) {
   const { accept, decline } = useInvitationActions()
+  const [confirmDecline, setConfirmDecline] = useState(false)
   const busy = accept.isPending || decline.isPending
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center">
@@ -67,13 +70,22 @@ export function InvitationRow({ invitation }: { invitation: MyInvitation }) {
         </p>
       </div>
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" disabled={busy} onClick={() => decline.mutate(invitation)}>
+        <Button variant="outline" size="sm" disabled={busy} onClick={() => setConfirmDecline(true)}>
           {decline.isPending ? <Spinner /> : <X />} Decline
         </Button>
         <Button size="sm" disabled={busy} onClick={() => accept.mutate(invitation)}>
           {accept.isPending ? <Spinner /> : <Check />} Accept
         </Button>
       </div>
+      <ConfirmDialog
+        open={confirmDecline}
+        onOpenChange={setConfirmDecline}
+        title={`Decline the invitation to ${invitation.workspace_name}?`}
+        description="You won't be able to accept it later. Someone in the workspace would need to invite you again."
+        confirmLabel="Decline invitation"
+        destructive
+        onConfirm={() => decline.mutateAsync(invitation)}
+      />
     </div>
   )
 }

@@ -311,6 +311,7 @@ function DocumentEditor({
   const [historyOpen, setHistoryOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [conflict, setConflict] = useState(false)
+  const [confirmReload, setConfirmReload] = useState(false)
 
   const secure = doc.kind === "secure"
   const readOnly = !doc.can_edit
@@ -552,7 +553,7 @@ function DocumentEditor({
           <AlertTitle>Someone else saved a newer version</AlertTitle>
           <AlertDescription>Your changes weren't saved. Copy anything you need, then load the latest version.</AlertDescription>
           <AlertAction>
-            <Button size="sm" variant="outline" disabled={reload.isPending} onClick={() => reload.mutate()}>
+            <Button size="sm" variant="outline" disabled={reload.isPending} onClick={() => setConfirmReload(true)}>
               {reload.isPending ? <Spinner /> : <RotateCw />} Load latest
             </Button>
           </AlertAction>
@@ -621,6 +622,15 @@ function DocumentEditor({
         confirmLabel="Delete document"
         destructive
         onConfirm={() => remove.mutateAsync()}
+      />
+      <ConfirmDialog
+        open={confirmReload}
+        onOpenChange={setConfirmReload}
+        title="Load the latest version?"
+        description="Your unsaved changes will be replaced by the version someone else saved. Copy anything you need first."
+        confirmLabel="Discard my changes"
+        destructive
+        onConfirm={() => reload.mutateAsync()}
       />
       <ConfirmDialog
         open={blocker.state === "blocked"}

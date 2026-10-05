@@ -45,6 +45,7 @@ export function ProfileSection() {
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(me?.name ?? "")
+  const [confirmRemoveAvatar, setConfirmRemoveAvatar] = useState(false)
 
   const setMe = (next: Me) => queryClient.setQueryData(qk.me, next)
   const saveName = useMutation({
@@ -100,7 +101,7 @@ export function ProfileSection() {
               {upload.isPending ? <Spinner /> : <Upload />} Upload photo
             </Button>
             {me.avatar_url ? (
-              <Button variant="ghost" size="sm" disabled={removeAvatar.isPending} onClick={() => removeAvatar.mutate()}>
+              <Button variant="ghost" size="sm" disabled={removeAvatar.isPending} onClick={() => setConfirmRemoveAvatar(true)}>
                 Remove
               </Button>
             ) : null}
@@ -135,6 +136,15 @@ export function ProfileSection() {
           </Button>
         </form>
       </CardContent>
+      <ConfirmDialog
+        open={confirmRemoveAvatar}
+        onOpenChange={setConfirmRemoveAvatar}
+        title="Remove your photo?"
+        description="Teammates will see your initials instead."
+        confirmLabel="Remove photo"
+        destructive
+        onConfirm={() => removeAvatar.mutateAsync()}
+      />
     </Card>
   )
 }
@@ -304,6 +314,7 @@ function SessionsCard() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [confirmOthers, setConfirmOthers] = useState(false)
+  const [revoking, setRevoking] = useState<{ id: string; current: boolean } | null>(null)
   const revoke = useMutation({
     mutationFn: (id: string) => unwrap(client.DELETE("/api/account/sessions/{session_id}", { params: { path: { session_id: id } } })),
     onSuccess: async (res, id) => {
@@ -354,7 +365,7 @@ function SessionsCard() {
                     {s.ip ?? "Unknown IP"} · active {relativeTime(s.last_seen_at)} · signed in {relativeTime(s.created_at)}
                   </p>
                 </div>
-                <Button variant="ghost" size="sm" disabled={revoke.isPending} onClick={() => revoke.mutate(s.id)}>
+                <Button variant="ghost" size="sm" disabled={revoke.isPending} onClick={() => setRevoking({ id: s.id, current: s.current })}>
                   <LogOut /> Sign out
                 </Button>
               </li>
@@ -376,6 +387,15 @@ function SessionsCard() {
         description={`${others} other session${others === 1 ? "" : "s"} will be signed out immediately. This device stays signed in.`}
         confirmLabel="Sign out others"
         onConfirm={() => revokeOthers.mutateAsync()}
+      />
+      <ConfirmDialog
+        open={revoking !== null}
+        onOpenChange={(o) => !o && setRevoking(null)}
+        title={revoking?.current ? "Sign out of this device?" : "Sign out this device?"}
+        description={revoking?.current ? "You'll go back to the sign-in page." : "That device will be signed out immediately."}
+        confirmLabel="Sign out"
+        destructive
+        onConfirm={() => (revoking ? revoke.mutateAsync(revoking.id) : undefined)}
       />
     </Card>
   )

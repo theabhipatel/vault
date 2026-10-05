@@ -21,6 +21,7 @@ import { useNavigate } from "react-router"
 
 import { CreateProjectDialog } from "@/components/create-dialogs"
 import { DocIcon } from "@/components/doc-badges"
+import { SignOutDialog } from "@/components/sign-out-dialog"
 import {
   Command,
   CommandDialog,
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/command"
 import { Spinner } from "@/components/ui/spinner"
 import { useProjects, useSearch, useWorkspace } from "@/hooks/api"
-import { useSetTheme, useSignOut } from "@/hooks/session"
+import { useSetTheme } from "@/hooks/session"
 import { Perm, can } from "@/lib/permissions"
 
 interface PaletteState {
@@ -78,7 +79,7 @@ export function CommandPaletteProvider({ workspaceId, children }: { workspaceId:
   const [creatingProject, setCreatingProject] = useState(false)
   const navigate = useNavigate()
   const setTheme = useSetTheme()
-  const signOut = useSignOut()
+  const [signingOut, setSigningOut] = useState(false)
   const { data: workspace } = useWorkspace(workspaceId ?? undefined)
   const { data: projects } = useProjects(workspaceId ?? undefined)
   const debounced = useDebounced(query, 200)
@@ -134,7 +135,7 @@ export function CommandPaletteProvider({ workspaceId, children }: { workspaceId:
     { id: "light", label: "Switch to light theme", icon: Sun, keywords: "appearance", run: () => setTheme("light") },
     { id: "dark", label: "Switch to dark theme", icon: Moon, keywords: "appearance", run: () => setTheme("dark") },
     { id: "system", label: "Use system theme", icon: Monitor, keywords: "appearance", run: () => setTheme("system") },
-    { id: "signout", label: "Sign out", icon: LogOut, run: () => signOut.mutate() },
+    { id: "signout", label: "Sign out", icon: LogOut, run: () => setSigningOut(true) },
   ]
 
   const visibleNav = navItems.filter((i) => i.visible !== false && matches(i, query))
@@ -223,6 +224,7 @@ export function CommandPaletteProvider({ workspaceId, children }: { workspaceId:
       {workspaceId ? (
         <CreateProjectDialog open={creatingProject} onOpenChange={setCreatingProject} workspaceId={workspaceId} />
       ) : null}
+      <SignOutDialog open={signingOut} onOpenChange={setSigningOut} />
     </PaletteContext.Provider>
   )
 }

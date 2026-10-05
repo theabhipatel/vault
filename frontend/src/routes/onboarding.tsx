@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { Logo } from "@/components/brand"
+import { SignOutDialog } from "@/components/sign-out-dialog"
 import { SetupVaultFlow } from "@/components/vault/vault-dialogs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -15,7 +16,6 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/c
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
 import { qk, useMe } from "@/hooks/api"
-import { useSignOut } from "@/hooks/session"
 import { client, errorMessage, unwrap } from "@/lib/api"
 import { setLastWorkspace } from "@/lib/last-workspace"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,7 @@ export function OnboardingPage() {
   const { data: me } = useMe()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const signOut = useSignOut()
+  const [signingOut, setSigningOut] = useState(false)
   const firstName = me?.name.split(" ")[0] ?? ""
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
@@ -62,7 +62,7 @@ export function OnboardingPage() {
       <div className="bg-vault-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black,transparent_65%)]" aria-hidden="true" />
       <header className="relative flex items-center justify-between px-4 py-5 sm:px-8">
         <Logo />
-        <Button variant="ghost" size="sm" onClick={() => signOut.mutate()}>
+        <Button variant="ghost" size="sm" onClick={() => setSigningOut(true)}>
           <LogOut /> Sign out
         </Button>
       </header>
@@ -115,6 +115,7 @@ export function OnboardingPage() {
           )}
         </div>
       </main>
+      <SignOutDialog open={signingOut} onOpenChange={setSigningOut} />
     </div>
   )
 }
